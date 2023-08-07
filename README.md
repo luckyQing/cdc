@@ -1,4 +1,4 @@
-> > 背景：<br/>
+> 背景：<br/>
 > 1、因有上百的数据库实例（上万个库，一百多万个表）需要从阿里云迁移到华为云，故有了mysql-cdc-mysql，从通过flink cdc同步mysql数据库到mysql（支持全量、增量）；<br/>
 > 2、因部分表数据量比较大，报表数据查询很慢，故有了mysql-cdc-iceberg，通过flink cdc同步mysql数据到iceberg（ods层），再通过flink sql对iceberg表数据进一步清理成为dwd层等；用户界面层通过trino查询iceberg表数据供使用。
 
