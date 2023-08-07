@@ -1,0 +1,77 @@
+application: ods_biz
+parallelism:
+  execution: 1
+  write: 1
+checkpoint:
+  checkpointInterval: 90000
+  minPauseBetweenCheckpoints: 90000
+  checkpointTimeout: 300000
+maintenance:
+  restartUrl: http://192.168.15.29:30001/job/restart
+redis:
+  host: 192.168.15.33
+  port: 6379
+  password: 123456
+proxy:
+  host: 192.168.15.100
+  port: 3128
+monitor:
+  delete:
+    key: 07a49203-40xe-41d7-a341-535e7126f67e
+    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"表数据物理删除：\n> application: %s\n> 目标库: %s\n> 目标表: %s\n> 删除数据: %s"}}'
+  ddl:
+    key: d17783a8-87df-44b8-a673-ed69c9891239
+    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**NO.**：%s\n**application id**：%s\n**job id**：%s\n**目标库**：%s\n**目标表**：%s\n**sourceOffset**：%s\n**ddl**：%s\n**arctic ddl**：%s"}}'
+  ddlSync:
+    key: bb200d2e-2bf7-4993-a4a2-8a0sdf7fa21c
+    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**application**：%s\n**目标库**：%s\n**目标表**：%s\n**ddl**：%s\n**同步结果**：%s"}}'
+globalTimeZone: +07:00
+hdfs:
+  warehouse: hdfs://nameservice/user/hive/warehouse/
+  uri: thrift://192.168.15.99:9083,thrift://192.168.15.100:9083
+  cacheDir: hdfs://nameservice/data/cache/ods/
+datasources:
+  cashLoanDb:
+    host: 192.168.15.201
+    port: 3306
+    username: flink_ro
+    password: 123456
+    details:
+      cash_loan:
+        # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成
+        # 无主键表：covid_test_users、izidata_test_collection、bnc、buyback
+        type: 2
+        tables:
+          - bank_info
+          - user
+  biz:
+    host: 192.168.15.88
+    port: 3306
+    username: flink_ro
+    password: 123456
+    details:
+      account_db:
+        # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成
+        type: 2
+        sharding:
+          dbNameSource: account_db
+          dbNameTarget: account_db
+          tables:
+            account_info: account_info_([0-9]|[1-9][0-9]|1[0-9][0-9])
+        tables:
+          - account_type
+      product_center:
+         1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成
+        type: 2
+        tables:
+          - pro_charge
+          - pro_contract_template
+          - pro_match_group
+          - pro_product
+          - pro_product_interest_rate
+          - pro_product_match
+          - pro_product_rate
+          - pro_product_series
+          - pro_product_series_charge
+          - pro_strategy
+          - pro_strategy_group

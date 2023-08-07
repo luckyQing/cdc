@@ -1,0 +1,57 @@
+package io.github.collin.cdc.ods.function;
+
+import cn.hutool.core.io.FileUtil;
+import io.github.collin.cdc.common.util.JacksonUtil;
+import io.github.collin.cdc.ods.adapter.RobotAdapter;
+import io.github.collin.cdc.ods.dto.RowJson;
+import io.github.collin.cdc.ods.dto.cache.PropertiesCacheDTO;
+import io.github.collin.cdc.ods.enums.OpType;
+import lombok.RequiredArgsConstructor;
+import org.apache.flink.api.common.functions.RichFilterFunction;
+import org.apache.flink.configuration.Configuration;
+
+import java.io.File;
+
+/**
+ * 物理删除过滤
+ *
+ * @author collin
+ * @date 2023-05-26
+ */
+@RequiredArgsConstructor
+public class DeletedFilterFunction extends RichFilterFunction<RowJson> {
+
+    /**
+     * 自定义任务名
+     */
+    private final String application;
+    /**
+     * properties缓存文件名
+     */
+    private final String propertiesCacheFileName;
+    private transient RobotAdapter robotAdapter;
+
+    @Override
+    public void open(Configuration parameters) throws Exception {
+        super.open(parameters);
+
+        // 读取properties
+        File propertiesFile = getRuntimeContext().getDistributedCache().getFile(propertiesCacheFileName);
+        String propertiesJson = FileUtil.readUtf8String(propertiesFile);
+        PropertiesCacheDTO propertiesCache = JacksonUtil.parseObject(propertiesJson, PropertiesCacheDTO.class);
+        this.robotAdapter = new RobotAdapter(propertiesCache.getProxy(), propertiesCache.getMonitor());
+    }
+
+    @Override
+    public boolean filter(RowJson value) throws Exception {
+        boolean isDelete = value.getOp() == OpType.DELETE;
+        if (!isDelete) {
+            return true;
+        }
+
+        robotAdapter.noticeAfterReceiveDelete(application, value.getDb(), value.getTable(), new String(value.getJson()));
+        // 物理删除，不处理
+        return false;
+    }
+
+}
