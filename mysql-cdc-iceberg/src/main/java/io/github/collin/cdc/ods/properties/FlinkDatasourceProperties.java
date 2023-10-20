@@ -32,6 +32,14 @@ public class FlinkDatasourceProperties implements Serializable {
      */
     private int port;
     /**
+     * serverId开始值
+     */
+    private int startServerId = 6001;
+    /**
+     * 源数据库时区
+     */
+    private String timeZone;
+    /**
      * 配置详情<数据库名, 详细配置>
      */
     private Map<String, FlinkDatasourceDetailProperties> details = new HashMap<>();

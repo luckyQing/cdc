@@ -9,6 +9,7 @@ import io.github.collin.cdc.migration.mysql.dto.RowJson;
 import io.github.collin.cdc.migration.mysql.properties.DatasourceProperties;
 
 import java.util.Properties;
+import java.util.TimeZone;
 
 /**
  * cdc工具类
@@ -18,14 +19,21 @@ import java.util.Properties;
  */
 public class CdcUtil {
 
-    public static MySqlSource<RowJson> buildMySqlSource(String instanceName, int startServerId, DatasourceProperties datasourceProperties, String[] dbNames, String[] tableNames,
-                                                        String globalTimeZone, int parallelism) {
+    public static MySqlSource<RowJson> buildMySqlSource(String instanceName, int startServerId, Long startupTimestampMillis, DatasourceProperties datasourceProperties, String[] dbNames, String[] tableNames,
+                                                        String sourceTimeZone, String targetTimeZone, int parallelism) {
         Properties jdbcProperties = new Properties();
         jdbcProperties.put("useSSL", "false");
+        jdbcProperties.put("zeroDateTimeBehavior", "convertToNull");
 
         int endServerId = startServerId + parallelism - 1;
         int connectionPoolSize = caculateConnectionPoolSize(parallelism);
         System.out.println(String.format("%s-->connectionPoolSize=%s", instanceName, connectionPoolSize));
+
+
+        TimeZone target = TimeZone.getTimeZone(targetTimeZone);
+        TimeZone source = TimeZone.getTimeZone(sourceTimeZone);
+        int zoneDif = target.getRawOffset()-source.getRawOffset();
+
         MySqlSourceBuilder<RowJson> mySqlSourceBuilder = MySqlSource.<RowJson>builder()
                 .hostname(datasourceProperties.getHost())
                 .port(datasourceProperties.getPort())
@@ -36,14 +44,14 @@ public class CdcUtil {
                 .username(datasourceProperties.getUsername())
                 .password(datasourceProperties.getPassword())
                 .serverId(String.format("%d-%d", startServerId, endServerId))
-                .deserializer(new RowJsonDeserializationSchema(false, globalTimeZone))
+                .deserializer(new RowJsonDeserializationSchema(false, targetTimeZone, zoneDif))
                 //.splitSize(4096)
                 .fetchSize(1024)
-                .startupOptions(StartupOptions.initial())
-                .serverTimeZone(globalTimeZone)
+                .startupOptions(startupTimestampMillis == null ? StartupOptions.initial() : StartupOptions.timestamp(startupTimestampMillis))
+                .serverTimeZone(sourceTimeZone)
                 .includeSchemaChanges(false)
-                .scanNewlyAddedTableEnabled(true)
-                .closeIdleReaders(true);
+                .scanNewlyAddedTableEnabled(true);
+        //.closeIdleReaders(true);
         return mySqlSourceBuilder.build();
     }
 

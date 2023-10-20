@@ -1,10 +1,12 @@
+env: PROD
 application: ods_biz
+kafkaBootstrapServers: 192.168.101.1:9092
 parallelism:
   execution: 1
   write: 1
 checkpoint:
-  checkpointInterval: 90000
-  minPauseBetweenCheckpoints: 90000
+  checkpointInterval: 180000
+  minPauseBetweenCheckpoints: 180000
   checkpointTimeout: 300000
 maintenance:
   restartUrl: http://192.168.15.29:30001/job/restart
@@ -17,15 +19,15 @@ proxy:
   port: 3128
 monitor:
   delete:
-    key: 07a49203-40xe-41d7-a341-535e7126f67e
+    key: 07a49203-40xe-41d7-a341-535e7826f67e
     messageTemplate: '{"msgtype":"markdown","markdown":{"content":"表数据物理删除：\n> application: %s\n> 目标库: %s\n> 目标表: %s\n> 删除数据: %s"}}'
   ddl:
-    key: d17783a8-87df-44b8-a673-ed69c9891239
+    key: d17783a8-87df-44b8-a673-ed69c9091239
     messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**NO.**：%s\n**application id**：%s\n**job id**：%s\n**目标库**：%s\n**目标表**：%s\n**sourceOffset**：%s\n**ddl**：%s\n**arctic ddl**：%s"}}'
   ddlSync:
-    key: bb200d2e-2bf7-4993-a4a2-8a0sdf7fa21c
+    key: bb200d2e-2bf7-4993-a4a2-8a0sdfdfa21c
     messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**application**：%s\n**目标库**：%s\n**目标表**：%s\n**ddl**：%s\n**同步结果**：%s"}}'
-globalTimeZone: +07:00
+targetTimeZone: +07:00
 hdfs:
   warehouse: hdfs://nameservice/user/hive/warehouse/
   uri: thrift://192.168.15.99:9083,thrift://192.168.15.100:9083
@@ -36,6 +38,8 @@ datasources:
     port: 3306
     username: flink_ro
     password: 123456
+    timeZone: +07:00
+    startServerId: 6101
     details:
       cash_loan:
         # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成
@@ -49,6 +53,8 @@ datasources:
     port: 3306
     username: flink_ro
     password: 123456
+    timeZone: +07:00
+    startServerId: 6101
     details:
       account_db:
         # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成

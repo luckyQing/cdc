@@ -1,4 +1,4 @@
-package io.github.collin.cdc.ods.exception;
+package io.github.collin.cdc.common.exception;
 
 import org.apache.flink.types.RowKind;
 

@@ -38,9 +38,9 @@ public class TableDTO implements Serializable {
      */
     private TableShardingType shardingType;
     /**
-     * uid字段名
+     * 分表字段名
      */
-    private String fieldUidName;
+    private String shardingFieldName;
     /**
      * jdbc批量提交记录大小
      */

@@ -2,6 +2,7 @@ package io.github.collin.cdc.common.util;
 
 import io.github.collin.cdc.common.constants.SchemaConstants;
 import io.github.collin.cdc.common.properties.HdfsProperties;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.CloseableIterator;
@@ -92,6 +93,20 @@ public class IcebergUtil {
      * @return
      */
     public static Table createTable(Schema schema, Catalog catalog, TableIdentifier identifier, boolean enableUpsert, Long writeTargetFileSizeBytes) {
+        return createTable(schema, catalog, identifier, null, enableUpsert, writeTargetFileSizeBytes);
+    }
+
+    /**
+     * 创建表
+     *
+     * @param schema
+     * @param catalog
+     * @param identifier
+     * @param enableUpsert
+     * @param writeTargetFileSizeBytes
+     * @return
+     */
+    public static Table createTable(Schema schema, Catalog catalog, TableIdentifier identifier, Set<String> indexColumnNames, boolean enableUpsert, Long writeTargetFileSizeBytes) {
         if (catalog.tableExists(identifier)) {
             return catalog.loadTable(identifier);
         }
@@ -108,15 +123,26 @@ public class IcebergUtil {
         // 删除老的metadata files
         prop.put(TableProperties.METADATA_PREVIOUS_VERSIONS_MAX, "3");
         prop.put(TableProperties.METADATA_DELETE_AFTER_COMMIT_ENABLED, "true");
-        if (schema.findField(SchemaConstants.SYNC_TS) != null) {
+
+        boolean existSyncColumn = schema.findField(SchemaConstants.SYNC_TS) != null;
+        if (existSyncColumn) {
             prop.put("write.parquet.bloom-filter-enabled.column.f_ts", "true");
         }
+        // 主键、索引
+        if (CollectionUtils.isNotEmpty(indexColumnNames)) {
+            for (String indexColumnName : indexColumnNames) {
+                prop.put(String.format("write.parquet.bloom-filter-enabled.column.%s", indexColumnName), "true");
+            }
+        }
+
         // 空文件提交触发数量（IcebergFilesCommitter#MAX_CONTINUOUS_EMPTY_COMMITS）
         prop.put("flink.max-continuous-empty-commits", "100");
         prop.put(TableProperties.MANIFEST_MIN_MERGE_COUNT, "30");
         // 快照保存2小时
         prop.put(TableProperties.MAX_SNAPSHOT_AGE_MS, "7200000");
-        Catalog.TableBuilder tableBuilder = catalog.buildTable(identifier, schema).withPartitionSpec(PartitionSpec.unpartitioned()).withProperties(prop);
+        Catalog.TableBuilder tableBuilder = catalog.buildTable(identifier, schema)
+                .withPartitionSpec(PartitionSpec.unpartitioned())
+                .withProperties(prop);
 
         // trino查询时的结果如果有多条，则会随机返回；最好设置排序
         // 根据主键排序

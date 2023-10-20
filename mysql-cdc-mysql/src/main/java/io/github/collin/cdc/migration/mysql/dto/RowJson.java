@@ -5,6 +5,7 @@ import io.github.collin.cdc.migration.mysql.enums.OpType;
 import lombok.*;
 
 import java.io.Serializable;
+import java.util.Map;
 
 /**
  * 提取出 [db、table、rowKind、data 对应结果的 json] 序列化结果
@@ -35,9 +36,9 @@ public class RowJson implements Serializable {
      */
     private OpType op;
     /**
-     * 表数据（json字节数组格式）
+     * 表数据
      */
-    private byte[] json;
+    private Map<String, Object> json;
     /**
      * ddl语句
      */

@@ -12,6 +12,11 @@
     <artifactId>mysql-cdc-iceberg</artifactId>
     <dependencies>
         <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-sql-connector-kafka</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>io.github.collin</groupId>
             <artifactId>cdc-common</artifactId>
         </dependency>

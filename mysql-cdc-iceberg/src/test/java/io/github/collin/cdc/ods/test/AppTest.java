@@ -10,7 +10,7 @@ public class AppTest {
 
     @Test
     public void testRun() throws Exception {
-        new Mysql2IcebergOdsHandler(YamlEnv.DEFAULT).run();
+        new Mysql2IcebergOdsHandler(YamlEnv.DEFAULT.getFileName()).run();
     }
 
 }

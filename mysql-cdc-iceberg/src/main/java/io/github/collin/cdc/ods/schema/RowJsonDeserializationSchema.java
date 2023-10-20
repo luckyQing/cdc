@@ -6,7 +6,6 @@ import com.ververica.cdc.connectors.mysql.debezium.dispatcher.SignalEventDispatc
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.data.Schema;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.data.Struct;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.json.DecimalFormat;
-import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.json.JsonConverter;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.json.JsonConverterConfig;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.source.SourceRecord;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.storage.ConverterConfig;
@@ -14,15 +13,17 @@ import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.storage.Conv
 import com.ververica.cdc.debezium.DebeziumDeserializationSchema;
 import io.debezium.data.Envelope;
 import io.github.collin.cdc.common.constants.SchemaConstants;
+import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.ods.dto.RowJson;
-import io.github.collin.cdc.ods.enums.OpType;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.util.Collector;
 
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.Map;
+import java.util.TimeZone;
 
 /**
  * 自定义 JSON 序列化器，{@link RowJson}，提取变更内容为 json 数据。
@@ -32,16 +33,21 @@ import java.util.Map;
 @Slf4j
 public class RowJsonDeserializationSchema implements DebeziumDeserializationSchema<RowJson> {
 
-    private transient JsonConverter jsonConverter;
+    private transient NornsJsonConverter jsonConverter;
+    /**
+     * 目标库时区
+     */
+    private String timeZone;
     private final Map<String, Object> customConverterConfigs = Maps.newHashMap();
     private transient TypeInformation<RowJson> producedType = TypeInformation.of(RowJson.class);
 
-    public RowJsonDeserializationSchema() {
-        this(JsonConverterConfig.SCHEMAS_ENABLE_DEFAULT);
+    public RowJsonDeserializationSchema(String timeZone) {
+        this(JsonConverterConfig.SCHEMAS_ENABLE_DEFAULT, timeZone);
     }
 
-    public RowJsonDeserializationSchema(boolean includeSchema) {
+    public RowJsonDeserializationSchema(boolean includeSchema, String timeZone) {
         this(includeSchema, Collections.emptyMap());
+        this.timeZone = timeZone;
     }
 
     public RowJsonDeserializationSchema(boolean includeSchema, Map<String, Object> customConverterConfigs) {
@@ -51,8 +57,10 @@ public class RowJsonDeserializationSchema implements DebeziumDeserializationSche
         this.customConverterConfigs.putAll(customConverterConfigs);
     }
 
-    protected JsonConverter initializeJsonConverter(Map<String, Object> customConverterConfigs) {
-        final JsonConverter jsonConverter = new NornsJsonConverter();
+    protected NornsJsonConverter initializeJsonConverter(Map<String, Object> customConverterConfigs) {
+        NornsJsonConverter.setTimeZone(TimeZone.getTimeZone(ZoneId.of(timeZone)));
+
+        final NornsJsonConverter jsonConverter = new NornsJsonConverter();
         jsonConverter.configure(customConverterConfigs);
         return jsonConverter;
     }
@@ -66,6 +74,10 @@ public class RowJsonDeserializationSchema implements DebeziumDeserializationSche
         Envelope.Operation op = Envelope.operationFor(sr);
         Struct value = (Struct) sr.value();
         final Struct source = value.getStruct(Envelope.FieldName.SOURCE);
+        //全量判断：source.ts_ms==0
+        Long ts = source.getInt64(Envelope.FieldName.TIMESTAMP);
+        boolean incremental = ts > 0;
+
         String db = source.getString(SignalEventDispatcher.DATABASE_NAME);
         String table = source.getString(SignalEventDispatcher.TABLE_NAME);
         Schema valueSchema = sr.valueSchema();
@@ -73,38 +85,26 @@ public class RowJsonDeserializationSchema implements DebeziumDeserializationSche
             String historyRecordJson = value.getString(SchemaConstants.HISTORY_RECORD);
             JsonNode historyRecordJsonNode = JacksonUtil.parse(historyRecordJson);
             String ddl = historyRecordJsonNode.get(SchemaConstants.DDL).asText();
-            out.collect(new RowJson(db, table, OpType.DDL, null, ddl, JacksonUtil.toJson(sr.sourceOffset())));
+            out.collect(new RowJson(db, table, OpType.DDL.getType(), null, ddl, JacksonUtil.toJson(sr.sourceOffset()), false));
         } else if (op != Envelope.Operation.CREATE && op != Envelope.Operation.READ) {
             if (op == Envelope.Operation.DELETE) {
-                out.collect(new RowJson(db, table, OpType.DELETE, extractBeforeRow(sr.topic(), value, valueSchema), null, null));
+                out.collect(new RowJson(db, table, OpType.DELETE.getType(), extractBeforeRow(value, valueSchema), null, null, incremental));
             } else {
                 // 有主键，可不需要UPDATE_BEFORE
                 //out.collect(new RowJson(db, table, OpType.UPDATE_BEFORE, extractBeforeRow(sr.topic(), value, valueSchema), null, null));
-                out.collect(new RowJson(db, table, OpType.UPDATE_AFTER, extractAfterRow(sr.topic(), value, valueSchema), null, null));
+                out.collect(new RowJson(db, table, OpType.UPDATE_AFTER.getType(), extractAfterRow(value, valueSchema), null, null, incremental));
             }
         } else {
-            out.collect(new RowJson(db, table, OpType.INSERT, extractAfterRow(sr.topic(), value, valueSchema), null, null));
+            out.collect(new RowJson(db, table, OpType.INSERT.getType(), extractAfterRow(value, valueSchema), null, null, incremental));
         }
     }
 
-    private byte[] extractAfterRow(String topic, Struct value, Schema valueSchema) {
-        try {
-            byte[] bytes = jsonConverter.fromConnectData(topic, valueSchema.field(Envelope.FieldName.AFTER).schema(), value.getStruct(Envelope.FieldName.AFTER));
-            return bytes == null ? new byte[]{} : bytes;
-        } catch (Exception e) {
-            log.error("extractAfterRow value:{}, valueSchema:{}", value, valueSchema, e);
-            return new byte[]{};
-        }
+    private Map<String, Object> extractAfterRow(Struct value, Schema valueSchema) {
+        return jsonConverter.fromConnectData(valueSchema.field(Envelope.FieldName.AFTER).schema(), value.getStruct(Envelope.FieldName.AFTER));
     }
 
-    private byte[] extractBeforeRow(String topic, Struct value, Schema valueSchema) {
-        try {
-            byte[] bytes = jsonConverter.fromConnectData(topic, valueSchema.field(Envelope.FieldName.BEFORE).schema(), value.getStruct(Envelope.FieldName.BEFORE));
-            return bytes == null ? new byte[]{} : bytes;
-        } catch (Exception e) {
-            log.error("extractBeforeRow value:{}, valueSchema:{}", value, valueSchema, e);
-            return new byte[]{};
-        }
+    private Map<String, Object> extractBeforeRow(Struct value, Schema valueSchema) {
+        return jsonConverter.fromConnectData(valueSchema.field(Envelope.FieldName.BEFORE).schema(), value.getStruct(Envelope.FieldName.BEFORE));
     }
 
     @Override

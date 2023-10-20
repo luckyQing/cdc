@@ -28,8 +28,8 @@ public class App {
      *      -Dyarn.application.name='sync risk mysql to mysql' \
      *      -Dstate.checkpoints.num-retained=3 \
      *      -t yarn-per-job --detached \
-     *      -c io.github.collin.cdc.migration.mysql.App /data/pkg/mysql-cdc-mysql-1.0.0-SNAPSHOT.jar \
-     *      31/application-10000.yaml
+     *      -c com.lepin.bigdata.migration.mysql.App /data/pkg/mysql_migration-1.0.0-SNAPSHOT.jar \
+     *      migration/application-19.yaml
      * </pre>
      *
      * @param args

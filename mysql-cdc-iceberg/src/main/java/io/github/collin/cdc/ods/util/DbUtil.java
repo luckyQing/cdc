@@ -10,6 +10,7 @@ import io.github.collin.cdc.ods.dto.TableMetaDataDTO;
 import io.github.collin.cdc.ods.enums.SyncType;
 import io.github.collin.cdc.ods.properties.FlinkDatasourceDetailProperties;
 import io.github.collin.cdc.ods.properties.FlinkDatasourceProperties;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.util.Preconditions;
 
@@ -171,14 +172,14 @@ public class DbUtil {
     /**
      * 获取表字段信息（分库分表的列多了2个字段“数据库名、表名”，由“数据库名、表名、原id”共同组成主键）
      *
-     * @param connnection
+     * @param connection
      * @param database
      * @param tableName
      * @return
      * @throws SQLException
      */
-    public static List<ColumnMetaDataDTO> getTableColumnMetaDatas(Connection connnection, String database, String tableName) throws SQLException {
-        DatabaseMetaData metaData = connnection.getMetaData();
+    public static List<ColumnMetaDataDTO> getTableColumnMetaDatas(Connection connection, String database, String tableName) throws SQLException {
+        DatabaseMetaData metaData = connection.getMetaData();
         List<ColumnMetaDataDTO> columnMetaDatas = new ArrayList<>();
         try (ResultSet columnsResultSet = metaData.getColumns(database, null, tableName, null)) {
             while (columnsResultSet.next()) {
@@ -193,14 +194,34 @@ public class DbUtil {
         }
 
         // 主键
-        String primaryKeyColumnName = getPrimaryKeyColumnName(metaData, database, tableName);
-        if (primaryKeyColumnName != null) {
-            columnMetaDatas.stream().filter(columnMetaData -> columnMetaData.getName().equals(primaryKeyColumnName))
-                    .findFirst()
-                    .ifPresent(columnMetaData -> columnMetaData.setPrimaryKey(true));
+        Set<String> primaryKeyColumnNames = getPrimaryKeyColumnNames(metaData, database, tableName);
+        if (CollectionUtils.isNotEmpty(primaryKeyColumnNames)) {
+            columnMetaDatas.stream()
+                    .filter(columnMetaData -> primaryKeyColumnNames.contains(columnMetaData.getName()))
+                    .forEach(columnMetaData -> columnMetaData.setPrimaryKey(true));
         }
 
         return columnMetaDatas;
+    }
+
+    /**
+     * 获取索引字段名（包含主键）
+     *
+     * @param connection
+     * @param database
+     * @param tableName
+     * @return
+     * @throws SQLException
+     */
+    public static Set<String> getIndexColumnNames(Connection connection, String database, String tableName) throws SQLException {
+        Set<String> indexColumnNames = new HashSet<>();
+        try (ResultSet resultSet = connection.getMetaData().getIndexInfo(database, null, tableName, false, false);) {
+            while (resultSet.next()) {
+                indexColumnNames.add(resultSet.getString(9));
+            }
+        }
+
+        return indexColumnNames;
     }
 
     /**
@@ -212,18 +233,19 @@ public class DbUtil {
      * @return 值为null则表示没有主键
      * @throws SQLException
      */
-    private static String getPrimaryKeyColumnName(DatabaseMetaData metaData, String database,
-                                                  String tableName) throws SQLException {
+    private static Set<String> getPrimaryKeyColumnNames(DatabaseMetaData metaData, String database,
+                                                        String tableName) throws SQLException {
+        Set<String> primaryKeys = new HashSet<>();
         try (ResultSet primaryKeyResultSet = metaData.getPrimaryKeys(database, null, tableName)) {
             while (primaryKeyResultSet.next()) {
-                return primaryKeyResultSet.getString(4);
+                primaryKeys.add(primaryKeyResultSet.getString(4));
             }
         }
-        return null;
+        return primaryKeys;
     }
 
-    public static Map<String, TableDTO> listAvailableTables(FlinkDatasourceProperties datasourceProperties, Map<String, FlinkDatasourceDetailProperties> details, String timeZone) {
-        Set<String> allDatabases = DbUtil.listDatabases(datasourceProperties, timeZone);
+    public static Map<String, TableDTO> listAvailableTables(FlinkDatasourceProperties datasourceProperties, Map<String, FlinkDatasourceDetailProperties> details) {
+        Set<String> allDatabases = DbUtil.listDatabases(datasourceProperties);
         Map<String, TableDTO> tableRelations = new HashMap<>();
         for (String name : allDatabases) {
             boolean match = false;
@@ -247,7 +269,7 @@ public class DbUtil {
                 }
             }
             if (match) {
-                String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), name, timeZone);
+                String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), name, datasourceProperties.getTimeZone());
                 Map<String, String> shardingTables = detailProperties.getSharding().getTables();
                 boolean isSharding = shardingTables != null && !shardingTables.isEmpty();
                 String targetDbName = StringUtils.isNotBlank(detailProperties.getSharding().getDbNameTarget()) ? detailProperties.getSharding().getDbNameTarget() : name;
@@ -295,11 +317,10 @@ public class DbUtil {
      *
      * @param datasourceProperties
      * @param details
-     * @param timeZone
      * @return
      */
-    public static Map<String, String> listAvailableDatabases(FlinkDatasourceProperties datasourceProperties, Map<String, FlinkDatasourceDetailProperties> details, String timeZone) {
-        Set<String> allDatabases = DbUtil.listDatabases(datasourceProperties, timeZone);
+    public static Map<String, String> listAvailableDatabases(FlinkDatasourceProperties datasourceProperties, Map<String, FlinkDatasourceDetailProperties> details) {
+        Set<String> allDatabases = DbUtil.listDatabases(datasourceProperties);
         Map<String, String> dbRelations = new HashMap<>();
         for (String name : allDatabases) {
             for (Map.Entry<String, FlinkDatasourceDetailProperties> entry : details.entrySet()) {
@@ -325,8 +346,8 @@ public class DbUtil {
         return dbRelations;
     }
 
-    private static Set<String> listDatabases(FlinkDatasourceProperties datasourceProperties, String timeZone) {
-        String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), datasourceProperties.getOneDatabaseName(), timeZone);
+    private static Set<String> listDatabases(FlinkDatasourceProperties datasourceProperties) {
+        String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), datasourceProperties.getOneDatabaseName(), datasourceProperties.getTimeZone());
         try (Connection connection = DbUtil.getConnection(datasourceProperties.getUsername(), datasourceProperties.getPassword(), url)) {
             return DbUtil.listDatabases(connection);
         } catch (Exception e) {

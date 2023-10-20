@@ -1,8 +1,9 @@
-package io.github.collin.cdc.ods.enums;
+package io.github.collin.cdc.common.enums;
 
-import io.github.collin.cdc.ods.exception.ConvertRowKindException;
+import io.github.collin.cdc.common.exception.ConvertRowKindException;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.apache.flink.types.RowKind;
 
 /**
@@ -11,6 +12,7 @@ import org.apache.flink.types.RowKind;
  * @author collin
  * @date 2023-04-24
  */
+@Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public enum OpType {
 
@@ -49,7 +51,7 @@ public enum OpType {
      *
      * @return
      */
-    public RowKind convertRowKind() {
+    public static RowKind convertRowKind(byte type) {
         if (type == INSERT.type) {
             return RowKind.INSERT;
         }

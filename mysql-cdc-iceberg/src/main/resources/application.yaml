@@ -11,15 +11,15 @@ redis:
   password: 123456
 monitor:
   delete:
-    key: 1f39e3a2-f60f-4a2b-8ca7-85bdf38dc439
+    key: 1f39e3a2-f60f-4a2b-8ca7-85bdf38xc439
     messageTemplate: '{"msgtype":"markdown","markdown":{"content":"表数据物理删除：\n> application: %s\n> 目标库: %s\n> 目标表: %s\n> 删除数据: %s"}}'
   ddl:
-    key: a10b6ece-1a00-4cc0-a07b-418ef3xa5bae
+    key: a10b6ece-1a00-4cc0-a07b-418ef3xaebae
     messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**NO.**：%s\n**application id**：%s\n**job id**：%s\n**目标库**：%s\n**目标表**：%s\n**sourceOffset**：%s\n**ddl**：%s\n**arctic ddl**：%s"}}'
   ddlSync:
-    key: b50b27e0-b4c0-46ab-b93f-042d4627aace
+    key: b50b27e0-b4c0-46ab-b93f-042d4622aace
     messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**application**：%s\n**目标库**：%s\n**目标表**：%s\n**ddl**：%s\n**同步结果**：%s"}}'
-globalTimeZone: +08:00
+targetTimeZone: +08:00
 hdfs:
   warehouse: hdfs://192.168.100.142:8020/user/hive/warehouse/
   uri: thrift://192.168.100.147:9083
@@ -30,6 +30,7 @@ datasources:
     port: 3306
     username: root
     password: 123456
+    timeZone: +08:00
     details:
       credit_limit_00_db:
         # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成
@@ -45,6 +46,7 @@ datasources:
     port: 3306
     username: root
     password: 123456
+    timeZone: +08:00
     details:
       cash_loan:
         # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成

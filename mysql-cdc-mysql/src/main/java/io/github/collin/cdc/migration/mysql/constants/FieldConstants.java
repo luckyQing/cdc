@@ -27,4 +27,14 @@ public class FieldConstants {
      */
     public static final String COMMENT_TABLE_NAME = "表名";
 
+    /**
+     * 分表字段名Fuid
+     */
+    public static final String SHARDING_COLUMN_NAME_UID = "Fuid";
+
+    /**
+     * 分表字段名Frc_order_id
+     */
+    public static final String SHARDING_COLUMN_NAME_ORDER_ID = "Frc_order_id";
+
 }

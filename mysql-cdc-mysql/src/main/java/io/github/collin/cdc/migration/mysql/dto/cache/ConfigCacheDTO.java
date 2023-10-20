@@ -27,10 +27,6 @@ public class ConfigCacheDTO implements Serializable {
      */
     private Map<String, TableDTO> tableRelations;
     /**
-     * 时区
-     */
-    private String timeZone;
-    /**
      * 目标数据源配置
      */
     private DatasourceProperties targetDatasource;

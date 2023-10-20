@@ -4,6 +4,7 @@ import com.mysql.cj.jdbc.Driver;
 import io.github.collin.cdc.common.util.RedisKeyUtil;
 import io.github.collin.cdc.migration.mysql.constants.DbConstants;
 import io.github.collin.cdc.migration.mysql.constants.JdbcConstants;
+import io.github.collin.cdc.migration.mysql.constants.SqlConstants;
 import io.github.collin.cdc.migration.mysql.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.migration.mysql.dto.TableDTO;
 import io.github.collin.cdc.migration.mysql.dto.TableMetaDataDTO;
@@ -93,8 +94,7 @@ public class DbUtil {
     public static String buildUrl(String host, int port, String dbName, String serverTimezone) {
         String url = null;
         try {
-            url = String.format("jdbc:mysql://%s:%s/%s?characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true&useSSL=false&rewriteBatchedStatements=true&serverTimezone=%s",
-                    host, port, dbName, URLEncoder.encode(serverTimezone, StandardCharsets.UTF_8.name()));
+            url = String.format("jdbc:mysql://%s:%s/%s?characterEncoding=utf-8&allowMultiQueries=true&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true&serverTimezone=%s", host, port, dbName, URLEncoder.encode(serverTimezone, StandardCharsets.UTF_8.name()));
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
@@ -222,6 +222,7 @@ public class DbUtil {
         DatabaseMetaData metaData = connnection.getMetaData();
         // 主键
         Set<String> primaryKeyColumnNames = getPrimaryKeyColumnName(metaData, database, tableName);
+        Set<String> uniqueKeyColumnNames = getUniqueKeyColumnName(metaData, database, tableName);
 
         List<ColumnMetaDataDTO> columnMetaDatas = new ArrayList<>();
         try (ResultSet columnsResultSet = metaData.getColumns(database, null, tableName, null)) {
@@ -230,6 +231,7 @@ public class DbUtil {
                 String name = columnsResultSet.getString(4);
                 columnMetaData.setName(name);
                 columnMetaData.setPrimaryKey(primaryKeyColumnNames.contains(name));
+                columnMetaData.setUniqueKey(uniqueKeyColumnNames.contains(name));
                 columnMetaDatas.add(columnMetaData);
             }
         }
@@ -246,8 +248,7 @@ public class DbUtil {
      * @return 值为null则表示没有主键
      * @throws SQLException
      */
-    private static Set<String> getPrimaryKeyColumnName(DatabaseMetaData metaData, String database,
-                                                       String tableName) throws SQLException {
+    private static Set<String> getPrimaryKeyColumnName(DatabaseMetaData metaData, String database, String tableName) throws SQLException {
         Set<String> primaryKeys = new HashSet<>();
         try (ResultSet primaryKeyResultSet = metaData.getPrimaryKeys(database, null, tableName)) {
             while (primaryKeyResultSet.next()) {
@@ -255,6 +256,27 @@ public class DbUtil {
             }
         }
         return primaryKeys;
+    }
+
+    /**
+     * 获取唯一索引字段名
+     *
+     * @param metaData
+     * @param database
+     * @param tableName
+     * @return 值为null则表示没有唯一索引
+     * @throws SQLException
+     */
+    private static Set<String> getUniqueKeyColumnName(DatabaseMetaData metaData, String database, String tableName) throws SQLException {
+        Set<String> uniqueKeys = new HashSet<>();
+        try (ResultSet uniqueKeyResultSet = metaData.getIndexInfo(database, null, tableName, true, false)) {
+            while (uniqueKeyResultSet.next()) {
+                if (!SqlConstants.PRIMARY_KEY_INDEX_TYPE_NAME.equals(uniqueKeyResultSet.getString(6))) {
+                    uniqueKeys.add(uniqueKeyResultSet.getString(9));
+                }
+            }
+        }
+        return uniqueKeys;
     }
 
     public static Map<String, TableDTO> listAvailableTables(DatasourceCdcProperties datasourceCdcProperties, Map<String, DatasourceRuleProperties> details, String timeZone) {
@@ -300,8 +322,8 @@ public class DbUtil {
                                 if (pattern.matcher(tableName).matches()) {
                                     String key = RedisKeyUtil.buildTableRelationKey(name, tableName);
                                     Preconditions.checkState(!tableRelations.containsKey(key), String.format("tableRelations[%s] exists!", key));
-                                    tableRelations.put(key, new TableDTO(targetDbName, entry.getKey(), true, shardingTableProperties.getShardingType(),
-                                            shardingTableProperties.getFieldUidName(), shardingTableProperties.getBatchSize(), shardingTableProperties.isNodata()));
+                                    tableRelations.put(key, new TableDTO(targetDbName, entry.getKey(), shardingTableProperties.isSharding(), shardingTableProperties.getShardingType(),
+                                            shardingTableProperties.getShardingFieldName(), shardingTableProperties.getBatchSize(), shardingTableProperties.isNodata()));
                                     matchSharding = true;
                                     break;
                                 }

@@ -1,6 +1,6 @@
 package io.github.collin.cdc.ods.function;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.ods.constants.FieldConstants;
 import io.github.collin.cdc.ods.dto.RowJson;
@@ -49,20 +49,16 @@ public class RowJsonConvertFunction extends RichFlatMapFunction<RowJson, RowData
         byte[] json = null;
         // 分库分表的数据列，添加库名、表名
         if (isSharding) {
-            Map<String, Object> map = JacksonUtil.parseJsonBytes(value.getJson(), new TypeReference<Map<String, Object>>() {
-            });
+            Map<String, Object> map = value.getJson();
             map.put(FieldConstants.DB_NAME, value.getDb());
             map.put(FieldConstants.TABLE_NAME, value.getTable());
             json = JacksonUtil.toBytes(map);
-
-            map.clear();
-            map = null;
         } else {
-            json = value.getJson();
+            json = JacksonUtil.toBytes(value.getJson());
         }
 
         RowData rowData = deserializationSchema.deserialize(json);
-        rowData.setRowKind(value.getOp().convertRowKind());
+        rowData.setRowKind(OpType.convertRowKind(value.getOp()));
 
         out.collect(rowData);
 
@@ -72,7 +68,6 @@ public class RowJsonConvertFunction extends RichFlatMapFunction<RowJson, RowData
         value.setJson(null);
         value.setDb(null);
         value.setTable(null);
-        value.setOp(null);
     }
 
 }

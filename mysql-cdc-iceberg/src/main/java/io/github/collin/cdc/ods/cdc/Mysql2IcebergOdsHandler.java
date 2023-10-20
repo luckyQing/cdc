@@ -2,12 +2,9 @@ package io.github.collin.cdc.ods.cdc;
 
 import com.ververica.cdc.connectors.mysql.source.MySqlSource;
 import io.github.collin.cdc.common.constants.CdcConstants;
-import io.github.collin.cdc.common.enums.YamlEnv;
+import io.github.collin.cdc.common.enums.Namespaces;
 import io.github.collin.cdc.common.properties.HdfsProperties;
-import io.github.collin.cdc.common.util.FlinkUtil;
-import io.github.collin.cdc.common.util.IcebergUtil;
-import io.github.collin.cdc.common.util.JacksonUtil;
-import io.github.collin.cdc.common.util.YamlUtil;
+import io.github.collin.cdc.common.util.*;
 import io.github.collin.cdc.ods.cache.OutputTagCache;
 import io.github.collin.cdc.ods.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.ods.dto.RowJson;
@@ -15,7 +12,8 @@ import io.github.collin.cdc.ods.dto.TableDTO;
 import io.github.collin.cdc.ods.dto.cache.PropertiesCacheDTO;
 import io.github.collin.cdc.ods.exception.PrimaryKeyStateException;
 import io.github.collin.cdc.ods.function.RowJsonConvertFunction;
-import io.github.collin.cdc.ods.function.SplitProcessFunction;
+import io.github.collin.cdc.ods.function.SplitMQProcessFunction;
+import io.github.collin.cdc.ods.function.SplitTableProcessFunction;
 import io.github.collin.cdc.ods.listener.FlinkJobListener;
 import io.github.collin.cdc.ods.properties.FlinkDatasourceDetailProperties;
 import io.github.collin.cdc.ods.properties.FlinkDatasourceProperties;
@@ -29,7 +27,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.CoreOptions;
+import org.apache.flink.connector.base.DeliveryGuarantee;
+import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
+import org.apache.flink.connector.kafka.sink.KafkaSink;
+import org.apache.flink.kafka.shaded.org.apache.kafka.clients.admin.AdminClient;
+import org.apache.flink.kafka.shaded.org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.flink.kafka.shaded.org.apache.kafka.clients.admin.NewTopic;
+import org.apache.flink.kafka.shaded.org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.SideOutputDataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
@@ -62,8 +71,8 @@ public class Mysql2IcebergOdsHandler {
 
     private final OdsProperties odsProperties;
 
-    public Mysql2IcebergOdsHandler(YamlEnv yamlEnv) throws IOException {
-        this.odsProperties = YamlUtil.readYaml(yamlEnv.getFileName(), OdsProperties.class);
+    public Mysql2IcebergOdsHandler(String yamlName) throws IOException {
+        this.odsProperties = YamlUtil.readYaml(yamlName, OdsProperties.class);
     }
 
     /**
@@ -78,7 +87,15 @@ public class Mysql2IcebergOdsHandler {
             return;
         }
 
-        StreamExecutionEnvironment env = FlinkUtil.buildStreamEnvironment(odsProperties.getGlobalTimeZone(), odsProperties.getParallelism(), odsProperties.getCheckpoint());
+        Configuration configuration = null;
+        if (odsProperties.isEnableG1()) {
+            Set<String> jvms = new HashSet<>(1);
+            // 使用G1收集器
+            jvms.add("-XX:+UseG1GC");
+            configuration = new Configuration();
+            configuration.set(CoreOptions.FLINK_JVM_OPTIONS, StringUtils.join(jvms, " "));
+        }
+        StreamExecutionEnvironment env = FlinkUtil.buildStreamEnvironment(configuration, odsProperties.getTargetTimeZone(), odsProperties.getParallelism(), odsProperties.getCheckpoint());
 
         // 将properties存hdfs中供后面使用
         PropertiesCacheDTO propertiesCacheDTO = new PropertiesCacheDTO();
@@ -90,11 +107,29 @@ public class Mysql2IcebergOdsHandler {
         HdfsUtil.overwrite(JacksonUtil.toJson(propertiesCacheDTO), odsProperties.getHdfs().getCacheDir(), propertiesCacheFileName);
         env.registerCachedFile(odsProperties.getHdfs().getCacheDir() + propertiesCacheFileName, propertiesCacheFileName);
 
+        AdminClient adminClient = null;
+        Set<String> topics = null;
+        if (StringUtils.isNotBlank(odsProperties.getKafkaBootstrapServers())) {
+            Properties adminProperties = new Properties();
+            adminProperties.setProperty(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, odsProperties.getKafkaBootstrapServers());
+            adminClient = AdminClient.create(adminProperties);
+            topics = adminClient.listTopics().names().get();
+        }
+
         for (Map.Entry<String, FlinkDatasourceProperties> entry : datasources.entrySet()) {
-            proccessInstance(entry.getKey(), env, odsProperties, entry.getValue(), propertiesCacheFileName);
+            proccessInstance(entry.getKey(), env, odsProperties, entry.getValue(), propertiesCacheFileName, adminClient, topics);
         }
 
         env.getJobListeners().add(new FlinkJobListener(env, odsProperties));
+
+        // 释放
+        if (adminClient != null) {
+            adminClient.close();
+        }
+        if (topics != null) {
+            topics.clear();
+            topics = null;
+        }
 
         env.execute("sync mysql to iceberg(ods)");
     }
@@ -110,20 +145,19 @@ public class Mysql2IcebergOdsHandler {
      * @throws IOException
      */
     private static void proccessInstance(String instanceName, StreamExecutionEnvironment env, OdsProperties odsProperties, FlinkDatasourceProperties datasourceProperties,
-                                         String propertiesCacheFileName) throws IOException {
+                                         String propertiesCacheFileName, AdminClient adminClient, Set<String> topics) throws IOException {
         HdfsProperties hdfsProperties = odsProperties.getHdfs();
-        String globalTimeZone = odsProperties.getGlobalTimeZone();
         Map<String, FlinkDatasourceDetailProperties> details = datasourceProperties.getDetails();
         // 获取所有可用的数据库，并缓存关系<源数据库名, 目标数据库名>
-        Map<String, String> availableDatabases = DbUtil.listAvailableDatabases(datasourceProperties, details, globalTimeZone);
+        Map<String, String> availableDatabases = DbUtil.listAvailableDatabases(datasourceProperties, details);
 
         // 获取所有可用的表，并缓存关系<源数据库名.源表名, 目标表名>
-        Map<String, TableDTO> availableTables = DbUtil.listAvailableTables(datasourceProperties, details, globalTimeZone);
+        Map<String, TableDTO> availableTables = DbUtil.listAvailableTables(datasourceProperties, details);
 
         CatalogLoader catalogLoader = IcebergUtil.catalogConfiguration(hdfsProperties);
         HiveCatalog hiveCatalog = (HiveCatalog) catalogLoader.loadCatalog();
 
-        MysqlSourceDTO mysqlSourceDTO = createNamespace(datasourceProperties, hiveCatalog, globalTimeZone);
+        MysqlSourceDTO mysqlSourceDTO = createNamespace(datasourceProperties, hiveCatalog, odsProperties.getEnv());
 
         // 映射关系
         Map<String, String> relations = buildRelation(availableDatabases, availableTables);
@@ -133,19 +167,22 @@ public class Mysql2IcebergOdsHandler {
         HdfsUtil.overwrite(JacksonUtil.toJson(relations), hdfsProperties.getCacheDir(), cacheFileName);
         env.registerCachedFile(hdfsProperties.getCacheDir() + cacheFileName, cacheFileName);
 
+        System.out.println("source:"+JacksonUtil.toJson(mysqlSourceDTO));
         MySqlSource<RowJson> mySqlSource = CdcUtil.buildMySqlSource(datasourceProperties, mysqlSourceDTO.getDatabaseList(), mysqlSourceDTO.getTableList(),
-                globalTimeZone, odsProperties.getParallelism().getExecution());
+                odsProperties.getParallelism().getExecution(), odsProperties.getTargetTimeZone(), odsProperties.getStartupMode());
 
-        SingleOutputStreamOperator<RowJson> dataStream = env.fromSource(mySqlSource, WatermarkStrategy.noWatermarks(), instanceName + "Source")
-                .uid(instanceName + "Source").shuffle()
+        SingleOutputStreamOperator<RowJson> wholeStream = env.fromSource(mySqlSource, WatermarkStrategy.noWatermarks(), instanceName + "Source")
+                .uid(instanceName + "Source")
+                //.rebalance()
                 //.filter(new DeletedFilterFunction(odsProperties.getApplication(), propertiesCacheFileName))
                 //.uid(String.format("%s filter delete ops", instanceName))
-                .process(new SplitProcessFunction(odsProperties.getApplication(), cacheFileName, propertiesCacheFileName))
+                .process(new SplitTableProcessFunction(odsProperties.getApplication(), cacheFileName, propertiesCacheFileName))
                 .uid(String.format("%s monitor ddl && output by tag", instanceName));
 
-        String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), datasourceProperties.getOneDatabaseName(), globalTimeZone);
+        String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), datasourceProperties.getOneDatabaseName(), datasourceProperties.getTimeZone());
 
         Set<String> proccessedTables = new HashSet<>();
+        Map<String, KafkaSink<String>> kafkaSinkMap = new HashMap<>();
         try (Connection connection = DbUtil.getConnection(datasourceProperties.getUsername(), datasourceProperties.getPassword(), url)) {
             for (Map.Entry<String, TableDTO> entry : availableTables.entrySet()) {
                 TableDTO tableDTO = entry.getValue();
@@ -155,7 +192,7 @@ public class Mysql2IcebergOdsHandler {
                     continue;
                 }
 
-                String targetDbName = CdcConstants.NAMESPACE_ODS_PRE + tableDTO.getDbName();
+                String targetDbName = Namespaces.getOdsPre(odsProperties.getEnv()) + tableDTO.getDbName();
                 Namespace namespace = Namespace.of(targetDbName);
                 TableIdentifier identifier = TableIdentifier.of(namespace, tableDTO.getTableName());
                 Table table = IcebergUtil.getExistTable(hdfsProperties, targetDbName, tableDTO.getTableName());
@@ -184,13 +221,53 @@ public class Mysql2IcebergOdsHandler {
                 }
 
                 OutputTag<RowJson> outputTag = OutputTagCache.getOutputTag(tableDTO.getDbName(), tableDTO.getTableName());
-                DataStream<RowData> inputStream = dataStream.getSideOutput(outputTag)
-                        .flatMap(new RowJsonConvertFunction(FlinkSchemaUtil.convert(schema), tableDTO.isSharding()))
-                        .name(targetDbNameAndTableName + " convert").shuffle();
+                SideOutputDataStream<RowJson> tableStream = wholeStream.getSideOutput(outputTag);
+                DataStream<RowData> icebergStream = null;
+                if (StringUtils.isNotBlank(odsProperties.getKafkaBootstrapServers())) {
+                    // 增量数据分流
+                    SingleOutputStreamOperator<RowJson> specificTableSplitStream = tableStream
+                            .process(new SplitMQProcessFunction(tableDTO.getDbName(), tableDTO.getTableName()))
+                            .uid(targetDbNameAndTableName + " mq split");
+                    // 增量数据发mq
+                    String topic = MqUtil.getTopic(odsProperties.getEnv(), tableDTO.getDbName(), tableDTO.getTableName());
+                    // 检查topic是否存在，不存在则创建
+                    if (!topics.contains(topic)) {
+                        NewTopic newTopic = new NewTopic(topic, 1, (short) 1);
+                        adminClient.createTopics(Collections.singletonList(newTopic)).all().get();
+                    }
+                    KafkaSink<String> kafkaSink = kafkaSinkMap.get(topic);
+                    if (kafkaSink == null) {
+                        kafkaSink = KafkaSink.<String>builder()
+                                .setBootstrapServers(odsProperties.getKafkaBootstrapServers())
+                                .setProperty(ProducerConfig.TRANSACTION_TIMEOUT_CONFIG, String.valueOf((15 * 60 - 5) * 1000))
+                                .setDeliveryGuarantee(DeliveryGuarantee.EXACTLY_ONCE)
+                                .setTransactionalIdPrefix(String.format("ods_%s", topic))
+                                .setRecordSerializer(
+                                        KafkaRecordSerializationSchema.builder()
+                                                .setTopic(topic)
+                                                .setKeySerializationSchema(new SimpleStringSchema())
+                                                .setValueSerializationSchema(new SimpleStringSchema())
+                                                .build())
+                                .build();
+
+                        kafkaSinkMap.put(topic, kafkaSink);
+                    }
+
+                    specificTableSplitStream.getSideOutput(OutputTagCache.getMQOutputTag(tableDTO.getDbName(), tableDTO.getTableName()))
+                            .sinkTo(kafkaSink)
+                            .uid(targetDbNameAndTableName + " sink mq");
+
+
+                    icebergStream = specificTableSplitStream.flatMap(new RowJsonConvertFunction(FlinkSchemaUtil.convert(schema), tableDTO.isSharding()))
+                            .uid(targetDbNameAndTableName + " convert");
+                } else {
+                    icebergStream = tableStream.flatMap(new RowJsonConvertFunction(FlinkSchemaUtil.convert(schema), tableDTO.isSharding()))
+                            .uid(targetDbNameAndTableName + " convert");
+                }
 
                 TableLoader tableLoader = TableLoader.fromCatalog(catalogLoader, identifier);
                 // 写iceberg
-                FlinkSink.forRowData(inputStream)
+                FlinkSink.forRowData(icebergStream)
                         .table(table)
                         .tableLoader(tableLoader)
                         .equalityFieldColumns(new ArrayList<>(identifierFieldNames))
@@ -206,6 +283,8 @@ public class Mysql2IcebergOdsHandler {
         // 释放
         proccessedTables.clear();
         proccessedTables = null;
+        kafkaSinkMap.clear();
+        kafkaSinkMap = null;
     }
 
     /**
@@ -213,10 +292,9 @@ public class Mysql2IcebergOdsHandler {
      *
      * @param datasourceProperties
      * @param hiveCatalog
-     * @param globalTimeZone
      * @return 返回需要同步的库表信息
      */
-    private static MysqlSourceDTO createNamespace(FlinkDatasourceProperties datasourceProperties, HiveCatalog hiveCatalog, String globalTimeZone) {
+    private static MysqlSourceDTO createNamespace(FlinkDatasourceProperties datasourceProperties, HiveCatalog hiveCatalog, String env) {
         Map<String, FlinkDatasourceDetailProperties> details = datasourceProperties.getDetails();
         // MySqlSource入参databaseList
         Set<String> dbNames = new HashSet<>();
@@ -228,7 +306,7 @@ public class Mysql2IcebergOdsHandler {
 
             FlinkDatasourceShardingProperties sharding = sourceDetail.getSharding();
 
-            String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), dbName, globalTimeZone);
+            String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), dbName, datasourceProperties.getTimeZone());
             try (Connection connection = DbUtil.getConnection(datasourceProperties.getUsername(), datasourceProperties.getPassword(), url)) {
                 Set<String> tableList = DbUtil.getTables(connection, sourceDetail.getType(), sourceDetail.getTables(), sourceDetail.getSharding().getTables());
                 tableList = tableList.stream().map(t -> {
@@ -242,7 +320,7 @@ public class Mysql2IcebergOdsHandler {
 
             // namespace不存在则创建
             String dbNameTarget = StringUtils.isNotBlank(sharding.getDbNameTarget()) ? sharding.getDbNameTarget() : dbName;
-            Namespace namespace = Namespace.of(CdcConstants.NAMESPACE_ODS_PRE + dbNameTarget);
+            Namespace namespace = Namespace.of(Namespaces.getOdsPre(env) + dbNameTarget);
             if (!hiveCatalog.namespaceExists(namespace)) {
                 System.out.println(String.format("---->start create namespace[%s]", namespace.toString()));
                 hiveCatalog.createNamespace(namespace);

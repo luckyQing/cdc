@@ -2,6 +2,7 @@ package io.github.collin.cdc.ods.util;
 
 import com.ververica.cdc.connectors.mysql.source.MySqlSource;
 import com.ververica.cdc.connectors.mysql.source.MySqlSourceBuilder;
+import com.ververica.cdc.connectors.mysql.table.StartupMode;
 import com.ververica.cdc.connectors.mysql.table.StartupOptions;
 import io.github.collin.cdc.common.constants.CdcConstants;
 import io.github.collin.cdc.common.util.IcebergUtil;
@@ -81,11 +82,14 @@ public class CdcUtil {
     }
 
     public static MySqlSource<RowJson> buildMySqlSource(FlinkDatasourceProperties datasourceProperties, String[] dbNames, String[] tableNames,
-                                                        String globalTimeZone, int parallelism) {
+                                                        int parallelism, String targetTimeZone, String startupModeStr) {
+        StartupOptions startupOptions = convert(startupModeStr);
+
         Properties jdbcProperties = new Properties();
         jdbcProperties.put("useSSL", "false");
+        jdbcProperties.put("zeroDateTimeBehavior", "convertToNull");
 
-        int startServerId = 6001;
+        int startServerId = datasourceProperties.getStartServerId();
         int endServerId = startServerId + parallelism - 1;
         MySqlSourceBuilder<RowJson> mySqlSourceBuilder = MySqlSource.<RowJson>builder()
                 .hostname(datasourceProperties.getHost())
@@ -97,12 +101,12 @@ public class CdcUtil {
                 .username(datasourceProperties.getUsername())
                 .password(datasourceProperties.getPassword())
                 .serverId(String.format("%d-%d", startServerId, endServerId))
-                .deserializer(new RowJsonDeserializationSchema())
-                .startupOptions(StartupOptions.initial())
-                .serverTimeZone(globalTimeZone)
+                .deserializer(new RowJsonDeserializationSchema(targetTimeZone))
+                .startupOptions(startupOptions)
+                .serverTimeZone(datasourceProperties.getTimeZone())
                 .includeSchemaChanges(true)
-                .scanNewlyAddedTableEnabled(true)
-                .closeIdleReaders(true);
+                .scanNewlyAddedTableEnabled(true);
+        //.closeIdleReaders(true);
         return mySqlSourceBuilder.build();
     }
 
@@ -116,6 +120,20 @@ public class CdcUtil {
         }
 
         return tableNames.length;
+    }
+
+    private static StartupOptions convert(String startupModeStr) {
+        StartupMode startupMode = StartupMode.valueOf(startupModeStr);
+        if (startupMode == StartupMode.INITIAL) {
+            return StartupOptions.initial();
+        }
+        if (startupMode == StartupMode.EARLIEST_OFFSET) {
+            return StartupOptions.earliest();
+        }
+        if (startupMode == StartupMode.LATEST_OFFSET) {
+            return StartupOptions.latest();
+        }
+        throw new IllegalArgumentException(String.format("startupMode[%s] is not unsupported",startupModeStr));
     }
 
 }

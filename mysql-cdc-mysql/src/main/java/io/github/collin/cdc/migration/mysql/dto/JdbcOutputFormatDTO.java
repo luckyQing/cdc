@@ -31,8 +31,8 @@ public class JdbcOutputFormatDTO {
      */
     private TableShardingType shardingType;
     /**
-     * uid字段名
+     * 分表字段名
      */
-    private String fieldUidName;
+    private String shardingFieldName;
 
 }

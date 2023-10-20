@@ -1,10 +1,11 @@
 package io.github.collin.cdc.ods.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import io.github.collin.cdc.ods.enums.OpType;
+import io.github.collin.cdc.common.enums.OpType;
 import lombok.*;
 
 import java.io.Serializable;
+import java.util.Map;
 
 /**
  * 提取出 [db、table、rowKind、data 对应结果的 json] 序列化结果
@@ -32,12 +33,14 @@ public class RowJson implements Serializable {
     private String table;
     /**
      * change log类型
+     *
+     * @see OpType
      */
-    private OpType op;
+    private byte op;
     /**
-     * 表数据（json字节数组格式）
+     * 表数据
      */
-    private byte[] json;
+    private Map<String, Object> json;
     /**
      * ddl语句
      */
@@ -46,5 +49,9 @@ public class RowJson implements Serializable {
      * binlog信息
      */
     private String offset;
+    /**
+     * 是否是增量数据
+     */
+    private boolean incremental;
 
 }

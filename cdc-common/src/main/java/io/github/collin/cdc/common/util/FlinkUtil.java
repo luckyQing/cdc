@@ -18,6 +18,7 @@ import org.apache.flink.table.api.config.TableConfigOptions;
 import org.apache.iceberg.flink.FlinkWriteOptions;
 
 import java.time.Duration;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -41,89 +42,89 @@ public class FlinkUtil {
     /**
      * 构建flink流环境
      *
-     * @param timeZone
+     * @param zoneId
      * @param parallelismProperties
      * @param checkpointProperties
      * @return
      */
-    public static StreamExecutionEnvironment buildStreamEnvironment(String timeZone, ParallelismProperties parallelismProperties, CheckpointProperties checkpointProperties) {
-        return buildStreamExecutionEnvironment(null, RuntimeExecutionMode.STREAMING, timeZone, parallelismProperties, checkpointProperties, null);
+    public static StreamExecutionEnvironment buildStreamEnvironment(String zoneId, ParallelismProperties parallelismProperties, CheckpointProperties checkpointProperties) {
+        return buildStreamExecutionEnvironment(null, RuntimeExecutionMode.STREAMING, zoneId, parallelismProperties, checkpointProperties, null);
     }
 
     /**
      * 构建flink流环境
      *
      * @param configuration
-     * @param timeZone
+     * @param zoneId
      * @param parallelismProperties
      * @param checkpointProperties
      * @return
      */
-    public static StreamExecutionEnvironment buildStreamEnvironment(Configuration configuration, String timeZone, ParallelismProperties parallelismProperties, CheckpointProperties checkpointProperties) {
-        return buildStreamExecutionEnvironment(configuration, RuntimeExecutionMode.STREAMING, timeZone, parallelismProperties, checkpointProperties, null);
+    public static StreamExecutionEnvironment buildStreamEnvironment(Configuration configuration, String zoneId, ParallelismProperties parallelismProperties, CheckpointProperties checkpointProperties) {
+        return buildStreamExecutionEnvironment(configuration, RuntimeExecutionMode.STREAMING, zoneId, parallelismProperties, checkpointProperties, null);
     }
 
     /**
      * 构建flink流环境
      *
-     * @param timeZone
+     * @param zoneId
      * @param parallelismProperties
      * @param checkpointProperties
      * @param webport
      * @return
      */
-    public static StreamExecutionEnvironment buildStreamEnvironment(String timeZone, ParallelismProperties parallelismProperties, CheckpointProperties checkpointProperties, Integer webport) {
-        return buildStreamExecutionEnvironment(null, RuntimeExecutionMode.STREAMING, timeZone, parallelismProperties, checkpointProperties, webport);
+    public static StreamExecutionEnvironment buildStreamEnvironment(String zoneId, ParallelismProperties parallelismProperties, CheckpointProperties checkpointProperties, Integer webport) {
+        return buildStreamExecutionEnvironment(null, RuntimeExecutionMode.STREAMING, zoneId, parallelismProperties, checkpointProperties, webport);
     }
 
     /**
      * 构建flink批环境
      *
-     * @param timeZone
+     * @param zoneId
      * @param parallelismProperties
      * @return
      */
-    public static StreamExecutionEnvironment buildBatchEnvironment(String timeZone, ParallelismProperties parallelismProperties) {
-        return buildStreamExecutionEnvironment(null, RuntimeExecutionMode.BATCH, timeZone, parallelismProperties, null, null);
+    public static StreamExecutionEnvironment buildBatchEnvironment(String zoneId, ParallelismProperties parallelismProperties) {
+        return buildStreamExecutionEnvironment(null, RuntimeExecutionMode.BATCH, zoneId, parallelismProperties, null, null);
     }
 
     /**
      * 构建flink批环境
      *
-     * @param timeZone
+     * @param zoneId
      * @param parallelismProperties
      * @return
      */
-    public static StreamExecutionEnvironment buildBatchEnvironment(Configuration configuration, String timeZone, ParallelismProperties parallelismProperties) {
-        return buildStreamExecutionEnvironment(configuration, RuntimeExecutionMode.BATCH, timeZone, parallelismProperties, null, null);
+    public static StreamExecutionEnvironment buildBatchEnvironment(Configuration configuration, String zoneId, ParallelismProperties parallelismProperties) {
+        return buildStreamExecutionEnvironment(configuration, RuntimeExecutionMode.BATCH, zoneId, parallelismProperties, null, null);
     }
 
     /**
      * 构建flink批环境
      *
-     * @param timeZone
+     * @param zoneId
      * @param parallelismProperties
      * @param webport
      * @return
      */
-    public static StreamExecutionEnvironment buildBatchEnvironment(String timeZone, ParallelismProperties parallelismProperties, Integer webport) {
-        return buildStreamExecutionEnvironment(null, RuntimeExecutionMode.BATCH, timeZone, parallelismProperties, null, webport);
+    public static StreamExecutionEnvironment buildBatchEnvironment(String zoneId, ParallelismProperties parallelismProperties, Integer webport) {
+        return buildStreamExecutionEnvironment(null, RuntimeExecutionMode.BATCH, zoneId, parallelismProperties, null, webport);
     }
 
     /**
      * 构建flink环境环境
      *
      * @param executionMode
-     * @param timeZone
+     * @param zoneId
      * @param parallelismProperties
      * @param checkpointProperties
      * @param webport
      * @return
      */
-    private static StreamExecutionEnvironment buildStreamExecutionEnvironment(Configuration configuration, RuntimeExecutionMode executionMode, String timeZone, ParallelismProperties parallelismProperties, CheckpointProperties checkpointProperties, Integer webport) {
-        TimeZone.setDefault(TimeZone.getTimeZone(timeZone));
+    private static StreamExecutionEnvironment buildStreamExecutionEnvironment(Configuration configuration, RuntimeExecutionMode executionMode, String zoneId, ParallelismProperties parallelismProperties, CheckpointProperties checkpointProperties, Integer webport) {
+        TimeZone.setDefault(TimeZone.getTimeZone(ZoneId.of(zoneId)));
 
-        Configuration copyOfConfiguration = buildConfiguration(configuration, executionMode, timeZone);
+        Configuration copyOfConfiguration = buildConfiguration(configuration, executionMode, zoneId);
         if (webport != null) {
             copyOfConfiguration.set(RestOptions.PORT, webport);
         }
@@ -142,7 +143,7 @@ public class FlinkUtil {
         return executionEnvironment;
     }
 
-    private static Configuration buildConfiguration(Configuration otherConfiguration, RuntimeExecutionMode executionMode, String timeZone) {
+    private static Configuration buildConfiguration(Configuration otherConfiguration, RuntimeExecutionMode executionMode, String zoneId) {
         Configuration configuration = otherConfiguration != null ? new Configuration(otherConfiguration) : new Configuration();
         // 任务完成后仍然可以checkpoint
         configuration.set(ExecutionCheckpointingOptions.ENABLE_CHECKPOINTS_AFTER_TASKS_FINISH, true);
@@ -153,9 +154,7 @@ public class FlinkUtil {
         Set<String> jvms = new HashSet<>(2);
         // 不设置时，ddl的备注会乱码
         jvms.add("-Dfile.encoding=UTF-8");
-        jvms.add("-Duser.timezone=" + timeZone);
-        // 使用G1收集器
-        jvms.add("-XX:+UseG1GC");
+        jvms.add("-Duser.timezone=" + zoneId);
         String jvmArgsStr = configuration.getString(CoreOptions.FLINK_JVM_OPTIONS);
         if (StringUtils.isNotBlank(jvmArgsStr)) {
             Set<String> otherJvms = Arrays.stream(jvmArgsStr.split(" ")).filter(StringUtils::isNotBlank).collect(Collectors.toSet());
@@ -171,7 +170,7 @@ public class FlinkUtil {
         }
         if (executionMode == RuntimeExecutionMode.BATCH) {
             configuration.set(ExecutionConfigOptions.TABLE_EXEC_DISABLED_OPERATORS, "NestedLoopJoin");
-            configuration.set(TableConfigOptions.LOCAL_TIME_ZONE, timeZone);
+            configuration.set(TableConfigOptions.LOCAL_TIME_ZONE, zoneId);
             configuration.set(FlinkWriteOptions.WRITE_PARALLELISM, 2);
         } else {
             if (configuration.get(PipelineOptions.OBJECT_REUSE) == null) {

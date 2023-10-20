@@ -31,7 +31,7 @@ public enum MysqlTypeMapping {
     FLOAT_UNSIGNED(MysqlType.FLOAT_UNSIGNED, Types.FloatType.get()),
     DOUBLE(MysqlType.DOUBLE, Types.DoubleType.get()),
     DOUBLE_UNSIGNED(MysqlType.DOUBLE_UNSIGNED, Types.DoubleType.get()),
-    TIMESTAMP(MysqlType.TIMESTAMP, Types.TimestampType.withZone()),
+    TIMESTAMP(MysqlType.TIMESTAMP, Types.TimestampType.withoutZone()),
     DATETIME(MysqlType.DATETIME, Types.TimestampType.withoutZone()),
     BIGINT(MysqlType.BIGINT, Types.LongType.get()),
     BIGINT_UNSIGNED(MysqlType.BIGINT_UNSIGNED, Types.LongType.get()),

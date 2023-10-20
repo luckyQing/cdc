@@ -19,6 +19,7 @@ public class DatasourceCdcProperties implements Serializable {
      * serverId开始值
      */
     private int startServerId = 7001;
+    private Long startupTimestampMillis;
     /**
      * 源数据源配置
      */

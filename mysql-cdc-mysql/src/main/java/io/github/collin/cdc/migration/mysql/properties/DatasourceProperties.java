@@ -29,5 +29,9 @@ public class DatasourceProperties implements Serializable {
      * 数据库端口号
      */
     private int port;
+    /**
+     * 数据库时区
+     */
+    private String timeZone = "GMT+8";
 
 }

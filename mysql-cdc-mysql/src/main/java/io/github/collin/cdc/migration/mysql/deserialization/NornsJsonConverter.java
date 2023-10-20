@@ -8,17 +8,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.github.collin.cdc.migration.mysql.constants.DateFormats;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.data.*;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.errors.DataException;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.json.JsonConverter;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.json.JsonConverterConfig;
+import io.github.collin.cdc.migration.mysql.constants.DateFormats;
+import io.github.collin.cdc.migration.mysql.constants.TimeDefaultValues;
 import lombok.Getter;
 import org.apache.flink.table.data.TimestampData;
 
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -40,11 +40,19 @@ import java.util.TimeZone;
 public class NornsJsonConverter extends JsonConverter {
 
     private JsonConverterConfig config;
+    /**
+     * 目标库时区
+     */
     private static TimeZone timeZone;
+    /**
+     * 目标库与源库时区差（单位毫秒）
+     */
+    private static int zoneDif;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public static void setTimeZone(TimeZone timeZone) {
+    public static void setTimeZoneInfo(TimeZone timeZone, int zoneDif) {
         NornsJsonConverter.timeZone = timeZone;
+        NornsJsonConverter.zoneDif = zoneDif;
     }
 
     private static final JsonNodeFactory JSON_NODE_FACTORY = JsonNodeFactory.withExactBigDecimals(true);
@@ -113,7 +121,12 @@ public class NornsJsonConverter extends JsonConverter {
                     throw new DataException("Invalid type for Long, expected Date but was " + value.getClass());
                 }
 
-                return JSON_NODE_FACTORY.textNode(TimestampData.fromEpochMillis((Long) value)
+                Long epochMillis = (Long) value;
+                if (epochMillis != null && zoneDif != 0 && epochMillis.compareTo(TimeDefaultValues.$TIMESTAMP_1970_01_01_00_00_00) != 0) {
+                    epochMillis += zoneDif;
+                }
+
+                return JSON_NODE_FACTORY.textNode(TimestampData.fromEpochMillis(epochMillis)
                         .toLocalDateTime().format(DATE_TIME_FORMATTER));
             }
         });
@@ -143,8 +156,8 @@ public class NornsJsonConverter extends JsonConverter {
         }
     }
 
-    public String convertToJsonString(Schema schema, Object value) throws JsonProcessingException {
-        return new String(objectMapper.writeValueAsBytes(convertToJsonNode(schema, value)), StandardCharsets.UTF_8);
+    public Map<String, Object> fromConnectData(Schema schema, Object value) {
+        return objectMapper.convertValue(convertToJsonNode(schema, value), Map.class);
     }
 
     private JsonNode convertToJsonNode(Schema schema, Object value) {

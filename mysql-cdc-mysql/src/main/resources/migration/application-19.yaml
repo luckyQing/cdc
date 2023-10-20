@@ -1,0 +1,113 @@
+application: migration_mysql_19
+parallelism:
+  execution: 2
+checkpoint:
+  checkpointInterval: 30000
+  minPauseBetweenCheckpoints: 30000
+  checkpointTimeout: 180000
+  tolerableCheckpointFailureNumber: 10
+  maxConcurrentCheckpoints: 1
+redis:
+  host: 192.168.10.2
+  port: 6379
+  password: sad22
+proxy:
+  host: 192.168.108.23
+  port: 3128
+robot:
+  key: 7396d54e-15f3-4c4a-80eb-ae9f68605x1b
+  messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**目标库**：%s\n**目标表**：%s\n**ddl**：%s"}}'
+jvmTimeZone: GMT+7
+globalTarget:
+  host: 192.168.128.6
+  port: 3306
+  username: flink_w
+  password: sadf33
+datasources:
+  creditdalDB:
+    source:
+      host: 10.100.198.39
+      port: 10019
+      username: flink_ro
+      password: dasdaf3
+    details:
+      rc_order_data_00_00_db:
+        # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成
+        type: 2
+        sharding:
+          sourceDb: rc_order_data_([0-9][0-9])_([0-9][0-9])_db
+          targetDb: rc_order_data_xx_yy_db
+          tables:
+            t_rc_order_data_basic:
+              sourceTable: t_rc_order_data_basic_[0-9]
+              shardingType: TEN
+            t_rc_order_data_crdcard:
+              sourceTable: t_rc_order_data_crdcard_[0-9]
+              shardingType: TEN
+            t_rc_order_data_edu:
+              sourceTable: t_rc_order_data_edu_[0-9]
+              shardingType: TEN
+            t_rc_order_data_face:
+              sourceTable: t_rc_order_data_face_[0-9]
+              shardingType: TEN
+              nodata: true
+            t_rc_order_data_fund:
+              sourceTable: t_rc_order_data_fund_[0-9]
+              shardingType: TEN
+              nodata: true
+            t_rc_order_data_guardian:
+              sourceTable: t_rc_order_data_guardian_[0-9]
+              shardingType: TEN
+              nodata: true
+            t_rc_order_data_insurance:
+              sourceTable: t_rc_order_data_insurance_[0-9]
+              shardingType: TEN
+              nodata: true
+            t_rc_order_data_insurance_vehicle:
+              sourceTable: t_rc_order_data_insurance_vehicle_[0-9]
+              shardingType: TEN
+              nodata: true
+            t_rc_order_data_vehicle:
+              sourceTable: t_rc_order_data_vehicle_[0-9]
+              shardingType: TEN
+              nodata: true
+      rc_user_data_00_00_db:
+        # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成
+        type: 2
+        sharding:
+          sourceDb: rc_user_data_([0-9][0-9])_([0-9][0-9])_db
+          targetDb: rc_user_data_xx_yy_db
+          tables:
+            t_rc_user_data_basic:
+              sourceTable: t_rc_user_data_basic_[0-9]
+              shardingType: TEN
+            t_rc_user_data_edu:
+              sourceTable: t_rc_user_data_edu_[0-9]
+              shardingType: TEN
+            t_rc_user_data_fund:
+              sourceTable: t_rc_user_data_fund_[0-9]
+              shardingType: TEN
+              nodata: true
+            t_rc_user_data_guardian:
+              sourceTable: t_rc_user_data_guardian_[0-9]
+              shardingType: TEN
+              nodata: true
+            t_rc_user_data_vehicle:
+              sourceTable: t_rc_user_data_vehicle_[0-9]
+              shardingType: TEN
+              nodata: true
+      rc_user_data_00_db:
+        # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成
+        type: 2
+        sharding:
+          sourceDb: rc_user_data_([0-9][0-9])_db
+          targetDb: rc_user_data_xx_db
+          tables:
+            t_rc_user_data_crdcard:
+              sourceTable: t_rc_user_data_crdcard_[0-9]
+              shardingType: TEN
+      rc_user_data_db:
+        # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成
+        type: 2
+        tables:
+          - t_rc_user_data_basic_single

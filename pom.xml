@@ -41,6 +41,7 @@
         <redisson>3.22.0</redisson>
         <trino>418</trino>
         <reflections>0.10.2</reflections>
+        <flink-sql-connector-kafka>3.0.0-1.17</flink-sql-connector-kafka>
         <scope>provided</scope>
     </properties>
 
@@ -292,6 +293,13 @@
                 <groupId>org.reflections</groupId>
                 <artifactId>reflections</artifactId>
                 <version>${reflections}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.flink</groupId>
+                <artifactId>flink-sql-connector-kafka</artifactId>
+                <version>${flink-sql-connector-kafka}</version>
+                <scope>${scope}</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

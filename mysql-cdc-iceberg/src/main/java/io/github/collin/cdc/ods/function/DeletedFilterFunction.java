@@ -1,11 +1,11 @@
 package io.github.collin.cdc.ods.function;
 
 import cn.hutool.core.io.FileUtil;
+import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.ods.adapter.RobotAdapter;
 import io.github.collin.cdc.ods.dto.RowJson;
 import io.github.collin.cdc.ods.dto.cache.PropertiesCacheDTO;
-import io.github.collin.cdc.ods.enums.OpType;
 import lombok.RequiredArgsConstructor;
 import org.apache.flink.api.common.functions.RichFilterFunction;
 import org.apache.flink.configuration.Configuration;
@@ -44,12 +44,12 @@ public class DeletedFilterFunction extends RichFilterFunction<RowJson> {
 
     @Override
     public boolean filter(RowJson value) throws Exception {
-        boolean isDelete = value.getOp() == OpType.DELETE;
+        boolean isDelete = value.getOp() == OpType.DELETE.getType();
         if (!isDelete) {
             return true;
         }
 
-        robotAdapter.noticeAfterReceiveDelete(application, value.getDb(), value.getTable(), new String(value.getJson()));
+        robotAdapter.noticeAfterReceiveDelete(application, value.getDb(), value.getTable(), JacksonUtil.toJson(value.getJson()));
         // 物理删除，不处理
         return false;
     }

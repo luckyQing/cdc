@@ -1,5 +1,8 @@
 package io.github.collin.cdc.ods.schema;
 
+import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,6 +28,7 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.flink.formats.common.TimeFormats.*;
@@ -48,6 +52,11 @@ public class NornsJsonConverter extends JsonConverter {
     private static final JsonNodeFactory JSON_NODE_FACTORY = JsonNodeFactory.withExactBigDecimals(true);
     // 自定义特殊数据类型转换器 key=schema.name
     private static final HashMap<String, LogicalTypeConverter> LOGICAL_CONVERTERS = new HashMap<>();
+    private static TimeZone timeZone;
+
+    public static void setTimeZone(TimeZone timeZone) {
+        NornsJsonConverter.timeZone = timeZone;
+    }
 
     static {
         LOGICAL_CONVERTERS.put(Decimal.LOGICAL_NAME, (schema, value, config) -> {
@@ -116,7 +125,9 @@ public class NornsJsonConverter extends JsonConverter {
                 return JSON_NODE_FACTORY.textNode(TimestampData.fromEpochMillis((long) value)
                         .toLocalDateTime().format(ISO8601_TIMESTAMP_WITH_LOCAL_TIMEZONE_FORMAT));
             } else if(value instanceof String){
-                return JSON_NODE_FACTORY.textNode((String)value);
+                DateTime dateTime = DateUtil.parseUTC((String)value);
+                dateTime.setTimeZone(timeZone);
+                return JSON_NODE_FACTORY.textNode(dateTime.toString(DatePattern.UTC_SIMPLE_PATTERN));
             }
 
             throw new DataException("Invalid type for Long or String, expected Date but was " + value.getClass());
@@ -164,8 +175,8 @@ public class NornsJsonConverter extends JsonConverter {
         }
     }
 
-    public String convertToJsonString(Schema schema, Object value) throws JsonProcessingException {
-        return new String(objectMapper.writeValueAsBytes(convertToJsonNode(schema, value)), StandardCharsets.UTF_8);
+    public Map<String, Object> fromConnectData(Schema schema, Object value) {
+        return objectMapper.convertValue(convertToJsonNode(schema, value), Map.class);
     }
 
     private JsonNode convertToJsonNode(Schema schema, Object value) {

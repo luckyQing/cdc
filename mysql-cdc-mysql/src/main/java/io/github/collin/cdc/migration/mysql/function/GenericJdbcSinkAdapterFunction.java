@@ -1,6 +1,5 @@
 package io.github.collin.cdc.migration.mysql.function;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.mysql.cj.jdbc.Driver;
 import com.ververica.cdc.connectors.shaded.com.google.common.collect.HashBasedTable;
 import io.github.collin.cdc.common.common.adapter.RedisAdapter;
@@ -11,6 +10,7 @@ import io.github.collin.cdc.common.properties.RobotProperties;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.migration.mysql.adapter.RobotAdapter;
 import io.github.collin.cdc.migration.mysql.constants.DbConstants;
+import io.github.collin.cdc.migration.mysql.constants.FieldConstants;
 import io.github.collin.cdc.migration.mysql.constants.JdbcConstants;
 import io.github.collin.cdc.migration.mysql.constants.SqlConstants;
 import io.github.collin.cdc.migration.mysql.dto.ColumnMetaDataDTO;
@@ -96,9 +96,9 @@ public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
         Map<String, TableDTO> tableRelations = configCacheDTO.getTableRelations();
         DatasourceProperties targetDatasource = configCacheDTO.getTargetDatasource();
 
-        try (Connection connection = DbUtil.getConnection(targetDatasource, DbConstants.INFORMATION_SCHEMA_DBNAME, configCacheDTO.getTimeZone())) {
+        try (Connection connection = DbUtil.getConnection(targetDatasource, DbConstants.INFORMATION_SCHEMA_DBNAME, targetDatasource.getTimeZone())) {
             // 初始化JdbcOutputFormat
-            initSourceOutputFormats(connection, tableRelations, targetDatasource, configCacheDTO.getTimeZone());
+            initSourceOutputFormats(connection, tableRelations, targetDatasource, targetDatasource.getTimeZone());
         }
 
         initShardingIndex(tableRelations);
@@ -116,8 +116,7 @@ public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
         String sourceTable = value.getTable();
         JdbcOutputFormatDTO jdbcOutputFormatDTO = sourceOutputFormats.get(sourceDb, sourceTable);
 
-        Map<String, Object> fieldValueMappings = JacksonUtil.parseJsonBytes(value.getJson(), new TypeReference<Map<String, Object>>() {
-        });
+        Map<String, Object> fieldValueMappings = value.getJson();
 
         int tableShardingIndex = 0;
         // 是否有合并字段
@@ -128,8 +127,20 @@ public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
         // 需要合并的表写入分片数据
         TableShardingType shardingType = jdbcOutputFormatDTO.getShardingType();
         if (shardingType != null && shardingType != TableShardingType.ONE) {
-            int uid = (int) fieldValueMappings.get(jdbcOutputFormatDTO.getFieldUidName());
-            tableShardingIndex = uid % shardingType.getTableCount();
+            String shardingFieldName = jdbcOutputFormatDTO.getShardingFieldName();
+            Object shardingFieldValue = fieldValueMappings.get(jdbcOutputFormatDTO.getShardingFieldName());
+            if (FieldConstants.SHARDING_COLUMN_NAME_UID.equals(shardingFieldName)) {
+                int uid = (int) shardingFieldValue;
+                tableShardingIndex = uid % shardingType.getTableCount();
+            } else if (FieldConstants.SHARDING_COLUMN_NAME_ORDER_ID.equals(shardingFieldName)) {
+                String orderId = (String) shardingFieldValue;
+                String uidTailStr = orderId.substring(orderId.length() - 3);
+
+                int uidTail = Integer.valueOf(uidTailStr);
+                tableShardingIndex = uidTail % shardingType.getTableCount();
+            } else {
+                throw new IllegalArgumentException(String.format("table[%s.%s] sharding field name is illegal-->%s", sourceDb, sourceTable, JacksonUtil.toJson(fieldValueMappings)));
+            }
         }
 
         if (value.getOp() == OpType.INSERT) {
@@ -238,7 +249,7 @@ public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
             if (jdbcOutputFormatDTO == null) {
                 JdbcExecutionOptions jdbcExecutionOptions = JdbcExecutionOptions.builder()
                         .withBatchSize(targetDto.getBatchSize() <= 0 ? JdbcConstants.BATCH_SIZE : targetDto.getBatchSize())
-                        .withBatchIntervalMs(5000L)
+                        .withBatchIntervalMs(JdbcConstants.BATCH_INTERVAL_MS)
                         .build();
                 TableShardingType shardingType = targetDto.getShardingType();
                 boolean isMutilTable = shardingType != null && shardingType != TableShardingType.ONE;
@@ -273,7 +284,7 @@ public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
                 jdbcOutputFormatDTO.setUpdateOurputFormats(updateOurputFormats);
                 jdbcOutputFormatDTO.setDeleteOurputFormats(deleteOurputFormats);
                 jdbcOutputFormatDTO.setShardingType(shardingType);
-                jdbcOutputFormatDTO.setFieldUidName(targetDto.getFieldUidName());
+                jdbcOutputFormatDTO.setShardingFieldName(targetDto.getShardingFieldName());
 
                 if (targetDto.isSharding()) {
                     long shardingFieldCount = columnMetaDatas.stream().filter(x -> SqlConstants.FIELD_DB_INDEX.equals(x.getName())

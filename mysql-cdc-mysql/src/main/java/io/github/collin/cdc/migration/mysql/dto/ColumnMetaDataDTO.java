@@ -24,5 +24,9 @@ public class ColumnMetaDataDTO {
      */
     @SuppressWarnings("AlibabaPojoMustUsePrimitiveField")
     private boolean primaryKey;
+    /**
+     * 是否为唯一索引
+     */
+    private boolean uniqueKey;
 
 }

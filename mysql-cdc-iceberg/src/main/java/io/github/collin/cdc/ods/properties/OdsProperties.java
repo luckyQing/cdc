@@ -17,9 +17,27 @@ public class OdsProperties implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
+     * 环境
+     * @see io.github.collin.cdc.common.enums.Env
+     */
+    protected String env;
+    /**
      * 应用名（确定后不要改动）
      */
     private String application;
+
+    /**
+     * 是否使用G1
+     */
+    private boolean enableG1;
+    /**
+     * 同步模式
+     */
+    private String startupMode = "INITIAL";
+    /**
+     * 增量发mq时的kafka server地址
+     */
+    private String kafkaBootstrapServers;
     /**
      * 并发数
      */
@@ -48,9 +66,9 @@ public class OdsProperties implements Serializable {
     private MonitorProperties monitor = new MonitorProperties();
 
     /**
-     * 全局时区
+     * 目标时区
      */
-    private String globalTimeZone;
+    private String targetTimeZone;
 
     /**
      * hdfs配置

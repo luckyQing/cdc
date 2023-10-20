@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.ververica.cdc.connectors.mysql.source.offset.BinlogOffset;
 import io.github.collin.cdc.common.common.adapter.RedisAdapter;
 import io.github.collin.cdc.common.dto.cache.ApplicationDTO;
+import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.common.util.RedisKeyUtil;
 import io.github.collin.cdc.ods.adapter.RobotAdapter;
@@ -14,7 +15,6 @@ import io.github.collin.cdc.ods.cache.OutputTagCache;
 import io.github.collin.cdc.ods.dto.RowJson;
 import io.github.collin.cdc.ods.dto.cache.DdlDTO;
 import io.github.collin.cdc.ods.dto.cache.PropertiesCacheDTO;
-import io.github.collin.cdc.ods.enums.OpType;
 import io.github.collin.cdc.ods.util.DdlUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -34,13 +34,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * 分流处理
+ * 库表旁路输出
  *
  * @author collin
  * @date 2023-05-16
  */
 @Slf4j
-public class SplitProcessFunction extends ProcessFunction<RowJson, RowJson> {
+public class SplitTableProcessFunction extends ProcessFunction<RowJson, RowJson> {
 
     /**
      * 数据库及表映射关系缓存文件名
@@ -65,7 +65,7 @@ public class SplitProcessFunction extends ProcessFunction<RowJson, RowJson> {
     private transient RobotAdapter robotAdapter;
     private transient RedisAdapter redisAdapter;
 
-    public SplitProcessFunction(String application, String relationCacheFileName, String propertiesCacheFileName) {
+    public SplitTableProcessFunction(String application, String relationCacheFileName, String propertiesCacheFileName) {
         this.application = application;
         this.relationCacheFileName = relationCacheFileName;
         this.propertiesCacheFileName = propertiesCacheFileName;
@@ -131,7 +131,7 @@ public class SplitProcessFunction extends ProcessFunction<RowJson, RowJson> {
         }
 
         // 监听ddl
-        if (value.getOp() == OpType.DDL) {
+        if (value.getOp() == OpType.DDL.getType()) {
             monitorDdl(value, targetDbName, targetTable);
             return;
         }

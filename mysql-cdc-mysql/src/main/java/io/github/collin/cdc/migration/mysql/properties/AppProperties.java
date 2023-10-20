@@ -48,14 +48,9 @@ public class AppProperties implements Serializable {
     private RobotProperties robot = new RobotProperties();
 
     /**
-     * 数据源时区
+     * jvm时区
      */
-    private String sourceTimeZone;
-
-    /**
-     * 目标库时区
-     */
-    private String targetTimeZone;
+    private String jvmTimeZone;
 
     /**
      * mysql数据源配置<数据库实例名称, 数据源配置>
