@@ -12,7 +12,7 @@ import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.data.*;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.errors.DataException;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.json.JsonConverter;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.json.JsonConverterConfig;
-import io.github.collin.cdc.mysql.cdc.mysql.constants.DateFormats;
+import io.github.collin.cdc.mysql.cdc.common.constants.DateFormats;
 import io.github.collin.cdc.mysql.cdc.mysql.constants.TimeDefaultValues;
 import lombok.Getter;
 import org.apache.flink.table.data.TimestampData;

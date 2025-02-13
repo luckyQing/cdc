@@ -1,4 +1,4 @@
-package io.github.collin.cdc.mysql.cdc.mysql.constants;
+package io.github.collin.cdc.mysql.cdc.common.constants;
 
 /**
  * 日期格式
