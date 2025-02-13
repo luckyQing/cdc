@@ -1,17 +1,15 @@
-package io.github.collin.cdc.mysql.cdc.iceberg.util;
+package io.github.collin.cdc.mysql.cdc.common.util;
 
 import com.mysql.cj.MysqlType;
 import com.mysql.cj.jdbc.Driver;
 import io.github.collin.cdc.common.util.RedisKeyUtil;
-import io.github.collin.cdc.mysql.cdc.iceberg.constants.DbConstants;
-import io.github.collin.cdc.mysql.cdc.iceberg.enums.SyncType;
-import io.github.collin.cdc.mysql.cdc.iceberg.properties.FlinkDatasourceDetailProperties;
-import io.github.collin.cdc.mysql.cdc.iceberg.properties.FlinkDatasourceProperties;
-import io.github.collin.cdc.mysql.cdc.iceberg.dto.ColumnMetaDataDTO;
-import io.github.collin.cdc.mysql.cdc.iceberg.dto.TableDTO;
-import org.apache.commons.collections.CollectionUtils;
+import io.github.collin.cdc.mysql.cdc.common.constants.DbConstants;
+import io.github.collin.cdc.mysql.cdc.common.dto.ColumnMetaDataDTO;
+import io.github.collin.cdc.mysql.cdc.common.dto.TableDTO;
+import io.github.collin.cdc.mysql.cdc.common.enums.SyncType;
+import io.github.collin.cdc.mysql.cdc.common.properties.FlinkDatasourceDetailProperties;
+import io.github.collin.cdc.mysql.cdc.common.properties.FlinkDatasourceProperties;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.flink.util.Preconditions;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -160,7 +158,7 @@ public class DbUtil {
 
         // 主键
         Set<String> primaryKeyColumnNames = getPrimaryKeyColumnNames(metaData, database, tableName);
-        if (CollectionUtils.isNotEmpty(primaryKeyColumnNames)) {
+        if (primaryKeyColumnNames != null && !primaryKeyColumnNames.isEmpty()) {
             columnMetaDatas.stream()
                     .filter(columnMetaData -> primaryKeyColumnNames.contains(columnMetaData.getName()))
                     .forEach(columnMetaData -> columnMetaData.setPrimaryKey(true));

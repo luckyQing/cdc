@@ -11,6 +11,7 @@
         <module>cdc-common</module>
         <module>mysql-cdc-mysql</module>
         <module>mysql-cdc-iceberg</module>
+        <module>mysql-cdc-common</module>
     </modules>
 
     <packaging>pom</packaging>
@@ -43,6 +44,7 @@
         <reflections>0.10.2</reflections>
         <flink-sql-connector-kafka>3.0.0-1.17</flink-sql-connector-kafka>
         <scope>provided</scope>
+        <flink-connector-starrocks>1.2.10_flink-1.17</flink-connector-starrocks>
     </properties>
 
     <dependencyManagement>
@@ -50,6 +52,11 @@
             <dependency>
                 <groupId>io.github.collin</groupId>
                 <artifactId>cdc-common</artifactId>
+                <version>1.0.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.collin</groupId>
+                <artifactId>mysql-cdc-common</artifactId>
                 <version>1.0.0-SNAPSHOT</version>
             </dependency>
 

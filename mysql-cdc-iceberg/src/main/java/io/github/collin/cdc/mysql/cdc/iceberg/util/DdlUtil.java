@@ -10,7 +10,7 @@ import com.alibaba.druid.sql.ast.statement.*;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlAlterTableChangeColumn;
 import com.ververica.cdc.connectors.mysql.source.offset.BinlogOffset;
 import io.github.collin.cdc.common.util.JacksonUtil;
-import io.github.collin.cdc.mysql.cdc.iceberg.constants.DbConstants;
+import io.github.collin.cdc.mysql.cdc.common.constants.DbConstants;
 import io.github.collin.cdc.mysql.cdc.iceberg.enums.MysqlTypeMapping;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;

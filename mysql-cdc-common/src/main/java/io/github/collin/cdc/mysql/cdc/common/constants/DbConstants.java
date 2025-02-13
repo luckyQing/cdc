@@ -1,4 +1,4 @@
-package io.github.collin.cdc.mysql.cdc.iceberg.constants;
+package io.github.collin.cdc.mysql.cdc.common.constants;
 
 /**
  * 数据库相关常量

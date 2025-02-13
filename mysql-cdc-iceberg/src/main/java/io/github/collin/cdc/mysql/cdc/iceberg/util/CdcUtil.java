@@ -6,11 +6,11 @@ import com.ververica.cdc.connectors.mysql.table.StartupMode;
 import com.ververica.cdc.connectors.mysql.table.StartupOptions;
 import io.github.collin.cdc.common.constants.CdcConstants;
 import io.github.collin.cdc.common.util.IcebergUtil;
+import io.github.collin.cdc.mysql.cdc.common.dto.ColumnMetaDataDTO;
+import io.github.collin.cdc.mysql.cdc.common.properties.FlinkDatasourceProperties;
 import io.github.collin.cdc.mysql.cdc.iceberg.constants.FieldConstants;
 import io.github.collin.cdc.mysql.cdc.iceberg.enums.MysqlTypeMapping;
-import io.github.collin.cdc.mysql.cdc.iceberg.properties.FlinkDatasourceProperties;
 import io.github.collin.cdc.mysql.cdc.iceberg.schema.RowJsonDeserializationSchema;
-import io.github.collin.cdc.mysql.cdc.iceberg.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.mysql.cdc.iceberg.dto.RowJson;
 import org.apache.iceberg.types.Types;
 

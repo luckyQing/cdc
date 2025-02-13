@@ -1,4 +1,4 @@
-package io.github.collin.cdc.mysql.cdc.iceberg.properties;
+package io.github.collin.cdc.mysql.cdc.common.properties;
 
 import lombok.Getter;
 import lombok.Setter;

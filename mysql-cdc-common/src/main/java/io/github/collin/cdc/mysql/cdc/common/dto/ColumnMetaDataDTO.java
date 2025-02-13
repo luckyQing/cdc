@@ -1,4 +1,4 @@
-package io.github.collin.cdc.mysql.cdc.iceberg.dto;
+package io.github.collin.cdc.mysql.cdc.common.dto;
 
 import com.mysql.cj.MysqlType;
 import lombok.Getter;

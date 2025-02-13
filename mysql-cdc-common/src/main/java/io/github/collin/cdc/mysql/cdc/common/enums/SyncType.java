@@ -1,4 +1,4 @@
-package io.github.collin.cdc.mysql.cdc.iceberg.enums;
+package io.github.collin.cdc.mysql.cdc.common.enums;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
