@@ -9,6 +9,13 @@ import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+/**
+ * sql执行器（在任务异常重启的情况下丢失数据。弃用）
+ *
+ * @param <T>
+ * @param <V>
+ */
+@Deprecated
 public class BatchStatementExecutor<T, V> implements JdbcBatchStatementExecutor<T> {
 
     private final String sql;

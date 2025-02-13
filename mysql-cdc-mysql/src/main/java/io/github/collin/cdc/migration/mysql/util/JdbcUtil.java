@@ -1,16 +1,15 @@
 package io.github.collin.cdc.migration.mysql.util;
 
-import io.github.collin.cdc.migration.mysql.constants.SqlConstants;
 import io.github.collin.cdc.migration.mysql.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.migration.mysql.jdbc.DecorateJdbcOutputFormat;
 import io.github.collin.cdc.migration.mysql.jdbc.DeleteJdbcStatementBuilder;
 import io.github.collin.cdc.migration.mysql.jdbc.InsertJdbcStatementBuilder;
 import io.github.collin.cdc.migration.mysql.jdbc.UpdateJdbcStatementBuilder;
-import io.github.collin.cdc.migration.mysql.jdbc.executor.BatchStatementExecutor;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
 import org.apache.flink.connector.jdbc.internal.JdbcOutputFormat;
 import org.apache.flink.connector.jdbc.internal.connection.SimpleJdbcConnectionProvider;
+import org.apache.flink.connector.jdbc.internal.executor.JdbcBatchStatementExecutor;
 
 import java.io.IOException;
 import java.util.List;
@@ -32,8 +31,7 @@ public class JdbcUtil {
         System.out.println("insertOurputFormat==>" + insertSql);
         JdbcOutputFormat<Map<String, Object>, ?, ?> insertOurputFormat = new DecorateJdbcOutputFormat(connectionProvider,
                 jdbcExecutionOptions,
-                (context) -> new BatchStatementExecutor(insertSql, new InsertJdbcStatementBuilder(columnMetaDatas), Function.identity()),
-                JdbcOutputFormat.RecordExtractor.identity());
+                (context) -> JdbcBatchStatementExecutor.simple(insertSql, new InsertJdbcStatementBuilder(columnMetaDatas), Function.identity()), JdbcOutputFormat.RecordExtractor.identity());
         insertOurputFormat.setRuntimeContext(ctx);
         insertOurputFormat.open(ctx.getIndexOfThisSubtask(), ctx.getNumberOfParallelSubtasks());
 
@@ -46,7 +44,7 @@ public class JdbcUtil {
         System.out.println("updateOurputFormat==>" + updateSql);
         JdbcOutputFormat<Map<String, Object>, ?, ?> updateOurputFormat = new DecorateJdbcOutputFormat(connectionProvider,
                 jdbcExecutionOptions,
-                (context) -> new BatchStatementExecutor(updateSql, new UpdateJdbcStatementBuilder(columnMetaDatas), Function.identity()),
+                (context) -> JdbcBatchStatementExecutor.simple(updateSql, new UpdateJdbcStatementBuilder(columnMetaDatas), Function.identity()),
                 JdbcOutputFormat.RecordExtractor.identity());
         updateOurputFormat.setRuntimeContext(ctx);
         updateOurputFormat.open(ctx.getIndexOfThisSubtask(), ctx.getNumberOfParallelSubtasks());
@@ -60,7 +58,7 @@ public class JdbcUtil {
         System.out.println("deleteOurputFormat==>" + deleteSql);
         JdbcOutputFormat<Map<String, Object>, ?, ?> deleteOurputFormat = new DecorateJdbcOutputFormat(connectionProvider,
                 jdbcExecutionOptions,
-                (context) -> new BatchStatementExecutor(deleteSql, new DeleteJdbcStatementBuilder(columnMetaDatas), Function.identity()),
+                (context) -> JdbcBatchStatementExecutor.simple(deleteSql, new DeleteJdbcStatementBuilder(columnMetaDatas), Function.identity()),
                 JdbcOutputFormat.RecordExtractor.identity());
         deleteOurputFormat.setRuntimeContext(ctx);
         deleteOurputFormat.open(ctx.getIndexOfThisSubtask(), ctx.getNumberOfParallelSubtasks());
