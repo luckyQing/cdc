@@ -4,18 +4,18 @@ import com.mysql.cj.jdbc.Driver;
 import com.ververica.cdc.connectors.shaded.com.google.common.collect.HashBasedTable;
 import io.github.collin.cdc.common.common.adapter.RedisAdapter;
 import io.github.collin.cdc.common.constants.CdcConstants;
+import io.github.collin.cdc.common.constants.SqlConstants;
 import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.properties.ProxyProperties;
 import io.github.collin.cdc.common.properties.RedisProperties;
 import io.github.collin.cdc.common.properties.RobotProperties;
 import io.github.collin.cdc.common.util.JacksonUtil;
+import io.github.collin.cdc.mysql.cdc.common.constants.DbConstants;
+import io.github.collin.cdc.mysql.cdc.common.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
 import io.github.collin.cdc.mysql.cdc.mysql.adapter.RobotAdapter;
-import io.github.collin.cdc.mysql.cdc.mysql.constants.DbConstants;
 import io.github.collin.cdc.mysql.cdc.mysql.constants.FieldConstants;
 import io.github.collin.cdc.mysql.cdc.mysql.constants.JdbcConstants;
-import io.github.collin.cdc.mysql.cdc.mysql.constants.SqlConstants;
-import io.github.collin.cdc.mysql.cdc.mysql.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.JdbcOutputFormatDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.TableDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.cache.ConfigCacheDTO;
@@ -96,7 +96,9 @@ public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
         Map<String, TableDTO> tableRelations = configCacheDTO.getTableRelations();
         DatasourceProperties targetDatasource = configCacheDTO.getTargetDatasource();
 
-        try (Connection connection = DbUtil.getConnection(targetDatasource, DbConstants.INFORMATION_SCHEMA_DBNAME, targetDatasource.getTimeZone())) {
+        try (Connection connection = DbUtil.getConnection(targetDatasource.getUsername(), targetDatasource.getPassword(),
+                targetDatasource.getHost(), targetDatasource.getPort(), DbConstants.INFORMATION_SCHEMA_DBNAME,
+                targetDatasource.getTimeZone())) {
             // 初始化JdbcOutputFormat
             initSourceOutputFormats(connection, tableRelations, targetDatasource, targetDatasource.getTimeZone());
         }

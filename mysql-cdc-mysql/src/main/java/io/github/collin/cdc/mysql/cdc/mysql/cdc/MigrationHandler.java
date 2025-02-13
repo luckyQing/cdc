@@ -6,19 +6,19 @@ import io.github.collin.cdc.common.constants.CdcConstants;
 import io.github.collin.cdc.common.util.FlinkUtil;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.common.util.YamlUtil;
+import io.github.collin.cdc.mysql.cdc.common.constants.DbConstants;
 import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
-import io.github.collin.cdc.mysql.cdc.mysql.constants.DbConstants;
+import io.github.collin.cdc.mysql.cdc.common.listener.FlinkJobListener;
 import io.github.collin.cdc.mysql.cdc.mysql.constants.FieldConstants;
-import io.github.collin.cdc.mysql.cdc.mysql.constants.SqlConstants;
+import io.github.collin.cdc.common.constants.SqlConstants;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.TableDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.cache.ConfigCacheDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.enums.TableShardingType;
 import io.github.collin.cdc.mysql.cdc.mysql.function.GenericJdbcSinkAdapterFunction;
-import io.github.collin.cdc.mysql.cdc.common.listener.FlinkJobListener;
+import io.github.collin.cdc.mysql.cdc.mysql.properties.*;
 import io.github.collin.cdc.mysql.cdc.mysql.util.CdcUtil;
 import io.github.collin.cdc.mysql.cdc.mysql.util.DbUtil;
 import io.github.collin.cdc.mysql.cdc.mysql.util.MigrationRedisKeyUtil;
-import io.github.collin.cdc.mysql.cdc.mysql.properties.*;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
@@ -202,7 +202,9 @@ public class MigrationHandler {
         // 当前已创建的库
         Set<String> createdDbs = new HashSet<>();
         Set<String> createdTables = new HashSet<>();
-        try (Connection targetConnection = DbUtil.getConnection(targetDatasource, DbConstants.INFORMATION_SCHEMA_DBNAME, globalTimeZone)) {
+        try (Connection targetConnection = DbUtil.getConnection(targetDatasource.getUsername(), targetDatasource.getPassword(),
+                targetDatasource.getHost(), targetDatasource.getPort(), DbConstants.INFORMATION_SCHEMA_DBNAME,
+                globalTimeZone)) {
             List<String> targetDatabases = DbUtil.listDatabases(targetConnection);
             for (Map.Entry<String, DatasourceRuleProperties> entry : details.entrySet()) {
                 String sourceDbName = entry.getKey();
@@ -211,7 +213,8 @@ public class MigrationHandler {
                 DatasourceShardingProperties sharding = sourceDetail.getSharding();
                 String dbNameSource = StringUtils.isNotBlank(sharding.getSourceDb()) ? sharding.getSourceDb() : sourceDbName;
                 DatasourceProperties source = datasourceCdcProperties.getSource();
-                try (Connection sourceConnection = DbUtil.getConnection(source, sourceDbName, globalTimeZone)) {
+                try (Connection sourceConnection = DbUtil.getConnection(source.getUsername(), source.getPassword(),
+                        source.getHost(), source.getPort(), sourceDbName, globalTimeZone)) {
                     Set<String> tableList = DbUtil.getTables(sourceConnection, sourceDetail.getType(), sourceDetail.getTables(), sourceDetail.getSharding().getTables(), true);
                     tableList = tableList.stream().map(t -> {
                         String finalSourceDbName = StringUtils.isNotBlank(sharding.getSourceDb()) ? sharding.getSourceDb() : sourceDbName;

@@ -35,6 +35,10 @@ public class ColumnMetaDataDTO {
     /**
      * 是否为主键
      */
-    private Boolean primaryKey;
+    private boolean primaryKey;
+    /**
+     * 是否为唯一索引
+     */
+    private boolean uniqueKey;
 
 }

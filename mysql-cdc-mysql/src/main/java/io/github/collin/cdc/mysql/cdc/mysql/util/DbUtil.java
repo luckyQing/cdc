@@ -1,13 +1,10 @@
 package io.github.collin.cdc.mysql.cdc.mysql.util;
 
-import com.mysql.cj.jdbc.Driver;
 import io.github.collin.cdc.common.util.RedisKeyUtil;
-import io.github.collin.cdc.mysql.cdc.mysql.constants.DbConstants;
+import io.github.collin.cdc.mysql.cdc.common.constants.DbConstants;
+import io.github.collin.cdc.mysql.cdc.common.util.DbCommonUtil;
 import io.github.collin.cdc.mysql.cdc.mysql.constants.JdbcConstants;
-import io.github.collin.cdc.mysql.cdc.mysql.constants.SqlConstants;
-import io.github.collin.cdc.mysql.cdc.mysql.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.TableDTO;
-import io.github.collin.cdc.mysql.cdc.mysql.enums.SyncType;
 import io.github.collin.cdc.mysql.cdc.mysql.properties.DatasourceCdcProperties;
 import io.github.collin.cdc.mysql.cdc.mysql.properties.DatasourceProperties;
 import io.github.collin.cdc.mysql.cdc.mysql.properties.DatasourceRuleProperties;
@@ -15,10 +12,10 @@ import io.github.collin.cdc.mysql.cdc.mysql.properties.DatasourceShardingTablePr
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.util.Preconditions;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -28,77 +25,7 @@ import java.util.regex.Pattern;
  * @author collin
  * @date 2019-07-13
  */
-public class DbUtil {
-
-    private DbUtil() {
-    }
-
-    /**
-     * 获取数据库连接
-     *
-     * @param username
-     * @param password
-     * @param url
-     * @return
-     * @throws ClassNotFoundException
-     * @throws SQLException
-     */
-    public static Connection getConnection(String username, String password, String url) throws ClassNotFoundException, SQLException {
-        Class.forName(Driver.class.getName());
-
-        Properties props = new Properties();
-        props.setProperty(DbConstants.ConnectionProperties.USER, username);
-        props.setProperty(DbConstants.ConnectionProperties.PASSWORD, password);
-        // 获取Oracle元数据 REMARKS信息
-        props.setProperty(DbConstants.ConnectionProperties.REMARKS_REPORTING, "true");
-        // 获取MySQL元数据 REMARKS信息
-        props.setProperty(DbConstants.ConnectionProperties.USE_INFORMATION_SCHEMA, "true");
-        return DriverManager.getConnection(url, props);
-    }
-
-
-    /**
-     * 获取数据库连接
-     *
-     * @param datasourceProperties
-     * @param dbName
-     * @param serverTimezone
-     * @return
-     * @throws ClassNotFoundException
-     * @throws SQLException
-     */
-    public static Connection getConnection(DatasourceProperties datasourceProperties, String dbName, String serverTimezone) throws ClassNotFoundException, SQLException {
-        Class.forName(Driver.class.getName());
-
-        Properties props = new Properties();
-        props.setProperty(DbConstants.ConnectionProperties.USER, datasourceProperties.getUsername());
-        props.setProperty(DbConstants.ConnectionProperties.PASSWORD, datasourceProperties.getPassword());
-        // 获取Oracle元数据 REMARKS信息
-        props.setProperty(DbConstants.ConnectionProperties.REMARKS_REPORTING, "true");
-        // 获取MySQL元数据 REMARKS信息
-        props.setProperty(DbConstants.ConnectionProperties.USE_INFORMATION_SCHEMA, "true");
-        String url = buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), dbName, serverTimezone);
-        return DriverManager.getConnection(url, props);
-    }
-
-    /**
-     * 构建url
-     *
-     * @param host
-     * @param port
-     * @param dbName
-     * @param serverTimezone
-     * @return
-     */
-    public static String buildUrl(String host, int port, String dbName, String serverTimezone) {
-        String url = null;
-        try {
-            url = String.format("jdbc:mysql://%s:%s/%s?characterEncoding=utf-8&allowMultiQueries=true&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true&serverTimezone=%s", host, port, dbName, URLEncoder.encode(serverTimezone, StandardCharsets.UTF_8.name()));
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
-        return url;
-    }
+public class DbUtil extends DbCommonUtil {
 
     /**
      * 获取表信息
@@ -138,26 +65,6 @@ public class DbUtil {
         return tableList;
     }
 
-    private static boolean filterTable(int type, Set<String> tables, String tableName) {
-        if (SyncType.ALL.getType() == type) {
-            return false;
-        }
-
-        if (tables == null) {
-            return true;
-        }
-
-        if (SyncType.INCLUDE.getType() == type) {
-            return !tables.contains(tableName);
-        }
-
-        if (SyncType.EXCLUDE.getType() == type) {
-            return tables.contains(tableName);
-        }
-
-        return true;
-    }
-
     private static boolean matchSharding(String tableName, Map<String, DatasourceShardingTableProperties> shardingTables) {
         if (shardingTables == null || shardingTables.isEmpty()) {
             return false;
@@ -174,79 +81,10 @@ public class DbUtil {
         return false;
     }
 
-    /**
-     * 获取表字段信息（分库分表的列多了2个字段“数据库名、表名”，由“数据库名、表名、原id”共同组成主键）
-     *
-     * @param connnection
-     * @param database
-     * @param tableName
-     * @return
-     * @throws SQLException
-     */
-    public static List<ColumnMetaDataDTO> getTableColumnMetaDatas(Connection connnection, String database, String tableName) throws SQLException {
-        DatabaseMetaData metaData = connnection.getMetaData();
-        // 主键
-        Set<String> primaryKeyColumnNames = getPrimaryKeyColumnName(metaData, database, tableName);
-        Set<String> uniqueKeyColumnNames = getUniqueKeyColumnName(metaData, database, tableName);
-
-        List<ColumnMetaDataDTO> columnMetaDatas = new ArrayList<>();
-        try (ResultSet columnsResultSet = metaData.getColumns(database, null, tableName, null)) {
-            while (columnsResultSet.next()) {
-                ColumnMetaDataDTO columnMetaData = new ColumnMetaDataDTO();
-                String name = columnsResultSet.getString(4);
-                columnMetaData.setName(name);
-                columnMetaData.setPrimaryKey(primaryKeyColumnNames.contains(name));
-                columnMetaData.setUniqueKey(uniqueKeyColumnNames.contains(name));
-                columnMetaDatas.add(columnMetaData);
-            }
-        }
-
-        return columnMetaDatas;
-    }
-
-    /**
-     * 获取主键字段名
-     *
-     * @param metaData
-     * @param database
-     * @param tableName
-     * @return 值为null则表示没有主键
-     * @throws SQLException
-     */
-    private static Set<String> getPrimaryKeyColumnName(DatabaseMetaData metaData, String database, String tableName) throws SQLException {
-        Set<String> primaryKeys = new HashSet<>();
-        try (ResultSet primaryKeyResultSet = metaData.getPrimaryKeys(database, null, tableName)) {
-            while (primaryKeyResultSet.next()) {
-                primaryKeys.add(primaryKeyResultSet.getString(4));
-            }
-        }
-        return primaryKeys;
-    }
-
-    /**
-     * 获取唯一索引字段名
-     *
-     * @param metaData
-     * @param database
-     * @param tableName
-     * @return 值为null则表示没有唯一索引
-     * @throws SQLException
-     */
-    private static Set<String> getUniqueKeyColumnName(DatabaseMetaData metaData, String database, String tableName) throws SQLException {
-        Set<String> uniqueKeys = new HashSet<>();
-        try (ResultSet uniqueKeyResultSet = metaData.getIndexInfo(database, null, tableName, true, false)) {
-            while (uniqueKeyResultSet.next()) {
-                if (!SqlConstants.PRIMARY_KEY_INDEX_TYPE_NAME.equals(uniqueKeyResultSet.getString(6))) {
-                    uniqueKeys.add(uniqueKeyResultSet.getString(9));
-                }
-            }
-        }
-        return uniqueKeys;
-    }
-
     public static Map<String, TableDTO> listAvailableTables(DatasourceCdcProperties datasourceCdcProperties, Map<String, DatasourceRuleProperties> details, String timeZone) {
         DatasourceProperties source = datasourceCdcProperties.getSource();
-        List<String> allDatabases = DbUtil.listDatabases(source, timeZone);
+        List<String> allDatabases = DbUtil.listDatabases(source.getHost(), source.getPort(), source.getUsername(),
+                source.getPassword(), timeZone);
         Map<String, TableDTO> tableRelations = new HashMap<>();
         for (String name : allDatabases) {
             boolean match = false;
@@ -323,147 +161,6 @@ public class DbUtil {
         }
 
         return result;
-    }
-
-    private static List<String> listDatabases(DatasourceProperties datasourceProperties, String timeZone) {
-        String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), DbConstants.INFORMATION_SCHEMA_DBNAME, timeZone);
-        try (Connection connection = DbUtil.getConnection(datasourceProperties.getUsername(), datasourceProperties.getPassword(), url)) {
-            return DbUtil.listDatabases(connection);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * 获取当前连接的所有数据库的名称
-     *
-     * @param connnection
-     * @return
-     */
-    public static List<String> listDatabases(Connection connnection) {
-        Set<String> databaseSet = new HashSet<>();
-        try (ResultSet resultSet = connnection.getMetaData().getCatalogs()) {
-            while (resultSet.next()) {
-                databaseSet.add(resultSet.getString(1));
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        List<String> databases = new ArrayList<>(databaseSet);
-        // 倒叙排序
-        Collections.sort(databases, Collections.reverseOrder());
-        return databases;
-    }
-
-    /**
-     * 获取创建数据库的sql
-     *
-     * @param connnection
-     * @return
-     */
-    public static String getCreateDatabaseSql(Connection connnection, String database) {
-        try (PreparedStatement preparedStatement = connnection.prepareStatement("show create database " + database);
-             ResultSet resultSet = preparedStatement.executeQuery()) {
-            while (resultSet.next()) {
-                return resultSet.getString(2);
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        throw new IllegalArgumentException(String.format("database[%s] is not exist", database));
-    }
-
-    /**
-     * 获取创建表的sql
-     *
-     * @param connnection
-     * @return
-     */
-    public static String getCreateTableSql(Connection connnection, String table) {
-        try (PreparedStatement preparedStatement = connnection.prepareStatement("show create table " + table);
-             ResultSet resultSet = preparedStatement.executeQuery()) {
-            while (resultSet.next()) {
-                return resultSet.getString(2);
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        throw new IllegalArgumentException(String.format("database[%s] is not exist", table));
-    }
-
-    /**
-     * 执行sql
-     *
-     * @param connnection
-     * @return
-     */
-    public static boolean executeSql(Connection connnection, String sql) {
-        try (PreparedStatement preparedStatement = connnection.prepareStatement(sql)) {
-            return preparedStatement.execute();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * 表是否存在
-     *
-     * @param connnection
-     * @return
-     */
-    public static boolean isTableExists(Connection connnection, String dbName, String tableName) {
-        String sql = "SELECT COUNT(*) FROM information_schema.tables WHERE table_name=? AND table_schema=?";
-        try (PreparedStatement preparedStatement = connnection.prepareStatement(sql)) {
-            preparedStatement.setString(1, tableName);
-            preparedStatement.setString(2, dbName);
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    return resultSet.getInt(1) > 0;
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        return false;
-    }
-
-    /**
-     * 获取分库索引
-     *
-     * @param dbName
-     * @return
-     */
-    public static String getDbShardingIndex(String dbName) {
-        Integer firstNumberIndex = null, lastNumberIndex = null;
-        for (int i = 0; i < dbName.length(); i++) {
-            char c = dbName.charAt(i);
-            if (c >= '0' && c <= '9') {
-                if (firstNumberIndex == null) {
-                    firstNumberIndex = i;
-                }
-                lastNumberIndex = i;
-            }
-        }
-        return dbName.substring(firstNumberIndex, lastNumberIndex + 1);
-    }
-
-    /**
-     * 获取分表索引
-     *
-     * @param tableName
-     * @return
-     */
-    public static String getTableShardingIndex(String tableName) {
-        Integer firstNumberIndex = null;
-        for (int i = 0; i < tableName.length(); i++) {
-            char c = tableName.charAt(i);
-            if (c >= '0' && c <= '9') {
-                firstNumberIndex = i;
-                break;
-            }
-        }
-        return tableName.substring(firstNumberIndex);
     }
 
 }

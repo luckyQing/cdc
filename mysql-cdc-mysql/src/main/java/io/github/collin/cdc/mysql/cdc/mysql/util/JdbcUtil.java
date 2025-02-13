@@ -1,6 +1,6 @@
 package io.github.collin.cdc.mysql.cdc.mysql.util;
 
-import io.github.collin.cdc.mysql.cdc.mysql.dto.ColumnMetaDataDTO;
+import io.github.collin.cdc.mysql.cdc.common.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.jdbc.DecorateJdbcOutputFormat;
 import io.github.collin.cdc.mysql.cdc.mysql.jdbc.DeleteJdbcStatementBuilder;
 import io.github.collin.cdc.mysql.cdc.mysql.jdbc.InsertJdbcStatementBuilder;

@@ -12,7 +12,7 @@ import io.github.collin.cdc.mysql.cdc.common.listener.FlinkJobListener;
 import io.github.collin.cdc.mysql.cdc.common.properties.FlinkDatasourceDetailProperties;
 import io.github.collin.cdc.mysql.cdc.common.properties.FlinkDatasourceProperties;
 import io.github.collin.cdc.mysql.cdc.common.properties.FlinkDatasourceShardingProperties;
-import io.github.collin.cdc.mysql.cdc.common.util.DbUtil;
+import io.github.collin.cdc.mysql.cdc.common.util.DbCommonUtil;
 import io.github.collin.cdc.mysql.cdc.iceberg.cache.OutputTagCache;
 import io.github.collin.cdc.mysql.cdc.iceberg.dto.cache.PropertiesCacheDTO;
 import io.github.collin.cdc.mysql.cdc.iceberg.exception.PrimaryKeyStateException;
@@ -149,10 +149,10 @@ public class Mysql2IcebergOdsHandler {
         HdfsProperties hdfsProperties = odsProperties.getHdfs();
         Map<String, FlinkDatasourceDetailProperties> details = datasourceProperties.getDetails();
         // 获取所有可用的数据库，并缓存关系<源数据库名, 目标数据库名>
-        Map<String, String> availableDatabases = DbUtil.listAvailableDatabases(datasourceProperties, details);
+        Map<String, String> availableDatabases = DbCommonUtil.listAvailableDatabases(datasourceProperties, details);
 
         // 获取所有可用的表，并缓存关系<源数据库名.源表名, 目标表名>
-        Map<String, TableDTO> availableTables = DbUtil.listAvailableTables(datasourceProperties, details);
+        Map<String, TableDTO> availableTables = DbCommonUtil.listAvailableTables(datasourceProperties, details);
 
         CatalogLoader catalogLoader = IcebergUtil.catalogConfiguration(hdfsProperties);
         HiveCatalog hiveCatalog = (HiveCatalog) catalogLoader.loadCatalog();
@@ -179,11 +179,11 @@ public class Mysql2IcebergOdsHandler {
                 .process(new SplitTableProcessFunction(odsProperties.getApplication(), cacheFileName, propertiesCacheFileName))
                 .uid(String.format("%s monitor ddl && output by tag", instanceName));
 
-        String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), datasourceProperties.getOneDatabaseName(), datasourceProperties.getTimeZone());
+        String url = DbCommonUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), datasourceProperties.getOneDatabaseName(), datasourceProperties.getTimeZone());
 
         Set<String> proccessedTables = new HashSet<>();
         Map<String, KafkaSink<String>> kafkaSinkMap = new HashMap<>();
-        try (Connection connection = DbUtil.getConnection(datasourceProperties.getUsername(), datasourceProperties.getPassword(), url)) {
+        try (Connection connection = DbCommonUtil.getConnection(datasourceProperties.getUsername(), datasourceProperties.getPassword(), url)) {
             for (Map.Entry<String, TableDTO> entry : availableTables.entrySet()) {
                 TableDTO tableDTO = entry.getValue();
                 // 已处理的不再处理，否则多个线程操作输出流会报错
@@ -202,7 +202,7 @@ public class Mysql2IcebergOdsHandler {
                     String sourceTableName = strs[1];
                     List<ColumnMetaDataDTO> columnMetaDatas = null;
                     try {
-                        columnMetaDatas = DbUtil.getTableColumnMetaDatas(connection, sourceDbName, sourceTableName);
+                        columnMetaDatas = DbCommonUtil.getTableColumnMetaDatas(connection, sourceDbName, sourceTableName);
                     } catch (SQLException e) {
                         throw new RuntimeException(e);
                     }
@@ -306,9 +306,9 @@ public class Mysql2IcebergOdsHandler {
 
             FlinkDatasourceShardingProperties sharding = sourceDetail.getSharding();
 
-            String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), dbName, datasourceProperties.getTimeZone());
-            try (Connection connection = DbUtil.getConnection(datasourceProperties.getUsername(), datasourceProperties.getPassword(), url)) {
-                Set<String> tableList = DbUtil.getTables(connection, sourceDetail.getType(), sourceDetail.getTables(), sourceDetail.getSharding().getTables());
+            String url = DbCommonUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), dbName, datasourceProperties.getTimeZone());
+            try (Connection connection = DbCommonUtil.getConnection(datasourceProperties.getUsername(), datasourceProperties.getPassword(), url)) {
+                Set<String> tableList = DbCommonUtil.getTables(connection, sourceDetail.getType(), sourceDetail.getTables(), sourceDetail.getSharding().getTables());
                 tableList = tableList.stream().map(t -> {
                     String sourceDbName = StringUtils.isNotBlank(sharding.getDbNameSource()) ? sharding.getDbNameSource() : dbName;
                     return sourceDbName + CdcConstants.DOT + t;

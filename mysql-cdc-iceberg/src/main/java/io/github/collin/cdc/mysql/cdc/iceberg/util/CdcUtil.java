@@ -38,7 +38,7 @@ public class CdcUtil {
         for (int i = 0; i < columnMetaDatas.size(); i++) {
             ColumnMetaDataDTO columnMetaData = columnMetaDatas.get(i);
             Types.NestedField nestedField = null;
-            if (columnMetaData.getPrimaryKey()) {
+            if (columnMetaData.isPrimaryKey()) {
                 nestedField = Types.NestedField.required((nestedFields.size() + 1), columnMetaData.getName(), MysqlTypeMapping.of(columnMetaData.getMysqlType()), columnMetaData.getComment());
             } else {
                 nestedField = Types.NestedField.optional((nestedFields.size() + 1), columnMetaData.getName(), MysqlTypeMapping.of(columnMetaData.getMysqlType()), columnMetaData.getComment());
@@ -68,7 +68,7 @@ public class CdcUtil {
 
         for (int i = 0; i < columnMetaDatas.size(); i++) {
             ColumnMetaDataDTO columnMetaData = columnMetaDatas.get(i);
-            if (!columnMetaData.getPrimaryKey()) {
+            if (!columnMetaData.isPrimaryKey()) {
                 continue;
             }
 

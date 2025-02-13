@@ -21,6 +21,10 @@ public class DbConstants {
      * mysql分隔符
      */
     public static final String MYSQL_DELIMITER = "`";
+    /**
+     * 数据库名information_schema
+     */
+    public static final String INFORMATION_SCHEMA_DBNAME = "information_schema";
 
     /**
      * 数据库连接属性

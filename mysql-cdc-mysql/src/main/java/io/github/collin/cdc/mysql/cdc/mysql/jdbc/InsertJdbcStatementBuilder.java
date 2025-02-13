@@ -1,6 +1,6 @@
 package io.github.collin.cdc.mysql.cdc.mysql.jdbc;
 
-import io.github.collin.cdc.mysql.cdc.mysql.dto.ColumnMetaDataDTO;
+import io.github.collin.cdc.mysql.cdc.common.dto.ColumnMetaDataDTO;
 
 import java.util.ArrayList;
 import java.util.List;
