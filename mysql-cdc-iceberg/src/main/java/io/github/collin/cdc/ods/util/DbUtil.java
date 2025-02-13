@@ -245,7 +245,7 @@ public class DbUtil {
     }
 
     public static Map<String, TableDTO> listAvailableTables(FlinkDatasourceProperties datasourceProperties, Map<String, FlinkDatasourceDetailProperties> details) {
-        Set<String> allDatabases = DbUtil.listDatabases(datasourceProperties);
+        List<String> allDatabases = DbUtil.listDatabases(datasourceProperties);
         Map<String, TableDTO> tableRelations = new HashMap<>();
         for (String name : allDatabases) {
             boolean match = false;
@@ -309,7 +309,16 @@ public class DbUtil {
             }
         }
 
-        return tableRelations;
+        // 按key倒叙排序，以便建表时，根据最新的表创建
+        List<String> keys = new ArrayList<>(tableRelations.keySet());
+        Collections.sort(keys, Collections.reverseOrder());
+
+        Map<String, TableDTO> result = new LinkedHashMap<>();
+        for (String key : keys) {
+            result.put(key, tableRelations.get(key));
+        }
+
+        return result;
     }
 
     /**
@@ -320,7 +329,7 @@ public class DbUtil {
      * @return
      */
     public static Map<String, String> listAvailableDatabases(FlinkDatasourceProperties datasourceProperties, Map<String, FlinkDatasourceDetailProperties> details) {
-        Set<String> allDatabases = DbUtil.listDatabases(datasourceProperties);
+        List<String> allDatabases = DbUtil.listDatabases(datasourceProperties);
         Map<String, String> dbRelations = new HashMap<>();
         for (String name : allDatabases) {
             for (Map.Entry<String, FlinkDatasourceDetailProperties> entry : details.entrySet()) {
@@ -346,7 +355,7 @@ public class DbUtil {
         return dbRelations;
     }
 
-    private static Set<String> listDatabases(FlinkDatasourceProperties datasourceProperties) {
+    private static List<String> listDatabases(FlinkDatasourceProperties datasourceProperties) {
         String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), datasourceProperties.getOneDatabaseName(), datasourceProperties.getTimeZone());
         try (Connection connection = DbUtil.getConnection(datasourceProperties.getUsername(), datasourceProperties.getPassword(), url)) {
             return DbUtil.listDatabases(connection);
@@ -361,15 +370,19 @@ public class DbUtil {
      * @param connnection
      * @return
      */
-    private static Set<String> listDatabases(Connection connnection) {
-        Set<String> databases = new HashSet<>();
+    private static List<String> listDatabases(Connection connnection) {
+        Set<String> databaseSet = new HashSet<>();
         try (ResultSet resultSet = connnection.getMetaData().getCatalogs();) {
             while (resultSet.next()) {
-                databases.add(resultSet.getString(1));
+                databaseSet.add(resultSet.getString(1));
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+
+        List<String> databases = new ArrayList<>(databaseSet);
+        // 倒叙排序
+        Collections.sort(databases, Collections.reverseOrder());
         return databases;
     }
 

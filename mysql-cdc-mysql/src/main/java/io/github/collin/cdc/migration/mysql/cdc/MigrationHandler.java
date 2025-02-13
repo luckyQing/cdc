@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -202,7 +203,7 @@ public class MigrationHandler {
         Set<String> createdDbs = new HashSet<>();
         Set<String> createdTables = new HashSet<>();
         try (Connection targetConnection = DbUtil.getConnection(targetDatasource, DbConstants.INFORMATION_SCHEMA_DBNAME, globalTimeZone)) {
-            Set<String> targetDatabases = DbUtil.listDatabases(targetConnection);
+            List<String> targetDatabases = DbUtil.listDatabases(targetConnection);
             for (Map.Entry<String, DatasourceRuleProperties> entry : details.entrySet()) {
                 String sourceDbName = entry.getKey();
                 DatasourceRuleProperties sourceDetail = entry.getValue();

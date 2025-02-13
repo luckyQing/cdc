@@ -281,7 +281,7 @@ public class DbUtil {
 
     public static Map<String, TableDTO> listAvailableTables(DatasourceCdcProperties datasourceCdcProperties, Map<String, DatasourceRuleProperties> details, String timeZone) {
         DatasourceProperties source = datasourceCdcProperties.getSource();
-        Set<String> allDatabases = DbUtil.listDatabases(source, timeZone);
+        List<String> allDatabases = DbUtil.listDatabases(source, timeZone);
         Map<String, TableDTO> tableRelations = new HashMap<>();
         for (String name : allDatabases) {
             boolean match = false;
@@ -348,7 +348,16 @@ public class DbUtil {
             }
         }
 
-        return tableRelations;
+        // 按key倒叙排序，以便建表时，根据最新的表创建
+        List<String> keys = new ArrayList<>(tableRelations.keySet());
+        Collections.sort(keys, Collections.reverseOrder());
+
+        Map<String, TableDTO> result = new LinkedHashMap<>();
+        for (String key : keys) {
+            result.put(key, tableRelations.get(key));
+        }
+
+        return result;
     }
 
     /**
@@ -386,7 +395,7 @@ public class DbUtil {
         return dbRelations;
     }
 
-    private static Set<String> listDatabases(DatasourceProperties datasourceProperties, String timeZone) {
+    private static List<String> listDatabases(DatasourceProperties datasourceProperties, String timeZone) {
         String url = DbUtil.buildUrl(datasourceProperties.getHost(), datasourceProperties.getPort(), DbConstants.INFORMATION_SCHEMA_DBNAME, timeZone);
         try (Connection connection = DbUtil.getConnection(datasourceProperties.getUsername(), datasourceProperties.getPassword(), url)) {
             return DbUtil.listDatabases(connection);
@@ -401,15 +410,19 @@ public class DbUtil {
      * @param connnection
      * @return
      */
-    public static Set<String> listDatabases(Connection connnection) {
-        Set<String> databases = new HashSet<>();
+    public static List<String> listDatabases(Connection connnection) {
+        Set<String> databaseSet = new HashSet<>();
         try (ResultSet resultSet = connnection.getMetaData().getCatalogs()) {
             while (resultSet.next()) {
-                databases.add(resultSet.getString(1));
+                databaseSet.add(resultSet.getString(1));
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+
+        List<String> databases = new ArrayList<>(databaseSet);
+        // 倒叙排序
+        Collections.sort(databases, Collections.reverseOrder());
         return databases;
     }
 
