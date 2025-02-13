@@ -1,7 +1,7 @@
 package io.github.collin.cdc.mysql.cdc.iceberg.cache;
 
 import io.github.collin.cdc.common.constants.CdcConstants;
-import io.github.collin.cdc.mysql.cdc.iceberg.dto.RowJson;
+import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
 import org.apache.flink.util.OutputTag;
 
 import java.util.concurrent.ConcurrentHashMap;

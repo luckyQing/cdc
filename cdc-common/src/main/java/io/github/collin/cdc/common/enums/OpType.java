@@ -51,17 +51,17 @@ public enum OpType {
      *
      * @return
      */
-    public static RowKind convertRowKind(byte type) {
-        if (type == INSERT.type) {
+    public static RowKind convertRowKind(OpType type) {
+        if (type == INSERT) {
             return RowKind.INSERT;
         }
-        if (type == UPDATE_BEFORE.type) {
+        if (type == UPDATE_BEFORE) {
             return RowKind.UPDATE_BEFORE;
         }
-        if (type == UPDATE_AFTER.type) {
+        if (type == UPDATE_AFTER) {
             return RowKind.UPDATE_AFTER;
         }
-        if (type == DELETE.type) {
+        if (type == DELETE) {
             return RowKind.DELETE;
         }
 

@@ -4,8 +4,8 @@ import com.ververica.cdc.connectors.mysql.source.MySqlSource;
 import com.ververica.cdc.connectors.mysql.source.MySqlSourceBuilder;
 import com.ververica.cdc.connectors.mysql.table.StartupOptions;
 import io.github.collin.cdc.common.constants.CdcConstants;
+import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
 import io.github.collin.cdc.mysql.cdc.mysql.deserialization.RowJsonDeserializationSchema;
-import io.github.collin.cdc.mysql.cdc.mysql.dto.RowJson;
 import io.github.collin.cdc.mysql.cdc.mysql.properties.DatasourceProperties;
 
 import java.util.Properties;

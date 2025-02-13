@@ -10,9 +10,9 @@ import io.github.collin.cdc.common.dto.cache.ApplicationDTO;
 import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.common.util.RedisKeyUtil;
+import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
 import io.github.collin.cdc.mysql.cdc.iceberg.adapter.RobotAdapter;
 import io.github.collin.cdc.mysql.cdc.iceberg.cache.OutputTagCache;
-import io.github.collin.cdc.mysql.cdc.iceberg.dto.RowJson;
 import io.github.collin.cdc.mysql.cdc.iceberg.dto.cache.DdlDTO;
 import io.github.collin.cdc.mysql.cdc.iceberg.dto.cache.PropertiesCacheDTO;
 import io.github.collin.cdc.mysql.cdc.iceberg.util.DdlUtil;
@@ -131,7 +131,7 @@ public class SplitTableProcessFunction extends ProcessFunction<RowJson, RowJson>
         }
 
         // 监听ddl
-        if (value.getOp() == OpType.DDL.getType()) {
+        if (value.getOp() == OpType.DDL) {
             monitorDdl(value, targetDbName, targetTable);
             return;
         }

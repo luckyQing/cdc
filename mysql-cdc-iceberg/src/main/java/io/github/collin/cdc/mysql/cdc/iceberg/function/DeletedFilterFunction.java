@@ -3,8 +3,8 @@ package io.github.collin.cdc.mysql.cdc.iceberg.function;
 import cn.hutool.core.io.FileUtil;
 import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.util.JacksonUtil;
+import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
 import io.github.collin.cdc.mysql.cdc.iceberg.adapter.RobotAdapter;
-import io.github.collin.cdc.mysql.cdc.iceberg.dto.RowJson;
 import io.github.collin.cdc.mysql.cdc.iceberg.dto.cache.PropertiesCacheDTO;
 import lombok.RequiredArgsConstructor;
 import org.apache.flink.api.common.functions.RichFilterFunction;
@@ -44,8 +44,7 @@ public class DeletedFilterFunction extends RichFilterFunction<RowJson> {
 
     @Override
     public boolean filter(RowJson value) throws Exception {
-        boolean isDelete = value.getOp() == OpType.DELETE.getType();
-        if (!isDelete) {
+        if (value.getOp() != OpType.DELETE) {
             return true;
         }
 

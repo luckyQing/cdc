@@ -1,8 +1,9 @@
-package io.github.collin.cdc.mysql.cdc.iceberg.dto;
+package io.github.collin.cdc.mysql.cdc.common.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.github.collin.cdc.common.enums.OpType;
 import lombok.*;
+import lombok.experimental.Accessors;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -17,7 +18,7 @@ import java.util.Map;
 @Setter
 @ToString
 @NoArgsConstructor
-@AllArgsConstructor
+@Accessors(chain = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class RowJson implements Serializable {
 
@@ -33,10 +34,8 @@ public class RowJson implements Serializable {
     private String table;
     /**
      * change log类型
-     *
-     * @see OpType
      */
-    private byte op;
+    private OpType op;
     /**
      * 表数据
      */

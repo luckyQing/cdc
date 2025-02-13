@@ -15,7 +15,7 @@ import io.debezium.data.Envelope;
 import io.github.collin.cdc.common.constants.SchemaConstants;
 import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.util.JacksonUtil;
-import io.github.collin.cdc.mysql.cdc.iceberg.dto.RowJson;
+import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.util.Collector;
@@ -85,17 +85,35 @@ public class RowJsonDeserializationSchema implements DebeziumDeserializationSche
             String historyRecordJson = value.getString(SchemaConstants.HISTORY_RECORD);
             JsonNode historyRecordJsonNode = JacksonUtil.parse(historyRecordJson);
             String ddl = historyRecordJsonNode.get(SchemaConstants.DDL).asText();
-            out.collect(new RowJson(db, table, OpType.DDL.getType(), null, ddl, JacksonUtil.toJson(sr.sourceOffset()), false));
+            out.collect(new RowJson().setDb(db)
+                    .setTable(table)
+                    .setOp(OpType.DDL)
+                    .setDdl(ddl)
+                    .setOffset(JacksonUtil.toJson(sr.sourceOffset()))
+                    .setIncremental(false));
         } else if (op != Envelope.Operation.CREATE && op != Envelope.Operation.READ) {
             if (op == Envelope.Operation.DELETE) {
-                out.collect(new RowJson(db, table, OpType.DELETE.getType(), extractBeforeRow(value, valueSchema), null, null, incremental));
+                out.collect(new RowJson().setDb(db)
+                        .setTable(table)
+                        .setOp(OpType.DELETE)
+                        .setJson(extractBeforeRow(value, valueSchema))
+                        .setIncremental(incremental));
             } else {
                 // 有主键，可不需要UPDATE_BEFORE
-                //out.collect(new RowJson(db, table, OpType.UPDATE_BEFORE, extractBeforeRow(sr.topic(), value, valueSchema), null, null));
-                out.collect(new RowJson(db, table, OpType.UPDATE_AFTER.getType(), extractAfterRow(value, valueSchema), null, null, incremental));
+                //out.collect(new RowJson(db, table, OpType.UPDATE_BEFORE, extr
+                // actBeforeRow(sr.topic(), value, valueSchema), null, null));
+                out.collect(new RowJson().setDb(db)
+                        .setTable(table)
+                        .setOp(OpType.UPDATE_AFTER)
+                        .setJson(extractAfterRow(value, valueSchema))
+                        .setIncremental(incremental));
             }
         } else {
-            out.collect(new RowJson(db, table, OpType.INSERT.getType(), extractAfterRow(value, valueSchema), null, null, incremental));
+            out.collect(new RowJson().setDb(db)
+                    .setTable(table)
+                    .setOp(OpType.INSERT)
+                    .setJson(extractAfterRow(value, valueSchema))
+                    .setIncremental(incremental));
         }
     }
 

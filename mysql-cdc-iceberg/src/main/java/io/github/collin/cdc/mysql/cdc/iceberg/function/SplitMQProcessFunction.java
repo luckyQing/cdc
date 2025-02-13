@@ -2,8 +2,8 @@ package io.github.collin.cdc.mysql.cdc.iceberg.function;
 
 import io.github.collin.cdc.common.dto.MessageBodyDTO;
 import io.github.collin.cdc.common.util.JacksonUtil;
+import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
 import io.github.collin.cdc.mysql.cdc.iceberg.cache.OutputTagCache;
-import io.github.collin.cdc.mysql.cdc.iceberg.dto.RowJson;
 import lombok.RequiredArgsConstructor;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.util.Collector;
@@ -31,7 +31,7 @@ public class SplitMQProcessFunction extends ProcessFunction<RowJson, RowJson> {
         // 增量时，同时发rocketmq，此处旁路输出一个流
         if (rowJson.isIncremental()) {
             MessageBodyDTO bodyDTO = new MessageBodyDTO();
-            bodyDTO.setOp(rowJson.getOp());
+            bodyDTO.setOp(rowJson.getOp().getType());
             bodyDTO.setRow(rowJson.getJson());
 
             context.output(OutputTagCache.getMQOutputTag(dbName, tableName), JacksonUtil.toJson(bodyDTO));
