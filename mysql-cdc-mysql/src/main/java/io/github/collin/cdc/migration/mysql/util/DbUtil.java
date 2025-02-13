@@ -7,7 +7,6 @@ import io.github.collin.cdc.migration.mysql.constants.JdbcConstants;
 import io.github.collin.cdc.migration.mysql.constants.SqlConstants;
 import io.github.collin.cdc.migration.mysql.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.migration.mysql.dto.TableDTO;
-import io.github.collin.cdc.migration.mysql.dto.TableMetaDataDTO;
 import io.github.collin.cdc.migration.mysql.enums.SyncType;
 import io.github.collin.cdc.migration.mysql.properties.DatasourceCdcProperties;
 import io.github.collin.cdc.migration.mysql.properties.DatasourceProperties;
@@ -99,40 +98,6 @@ public class DbUtil {
             throw new RuntimeException(e);
         }
         return url;
-    }
-
-    /**
-     * 获取表信息
-     *
-     * @param connnection
-     * @param type
-     * @param tables
-     * @param shardingTables
-     * @return
-     * @throws SQLException
-     */
-    public static Map<String, TableMetaDataDTO> getTablesMetaData(Connection connnection, int type, Set<String> tables, Map<String, DatasourceShardingTableProperties> shardingTables)
-            throws SQLException {
-        Map<String, TableMetaDataDTO> tableMetaDataMap = new HashMap<>(16);
-        try (ResultSet resultSet = connnection.getMetaData().getTables(connnection.getCatalog(), DbConstants.PUBLIC_SCHEMA_PATTERN, null, new String[]{DbConstants.TABLE_TYPE})) {
-            while (resultSet.next()) {
-                String tableName = resultSet.getString(3);
-                // TODO:
-                if (matchSharding(tableName, shardingTables)) {
-                    continue;
-                }
-                if (filterTable(type, tables, tableName)) {
-                    continue;
-                }
-
-                TableMetaDataDTO tableMetaDataDTO = new TableMetaDataDTO();
-                tableMetaDataDTO.setName(tableName);
-                tableMetaDataDTO.setComment(resultSet.getString(5));
-
-                tableMetaDataMap.put(tableMetaDataDTO.getName(), tableMetaDataDTO);
-            }
-        }
-        return tableMetaDataMap;
     }
 
     /**
@@ -358,41 +323,6 @@ public class DbUtil {
         }
 
         return result;
-    }
-
-    /**
-     * 获取所有可用的数据库
-     *
-     * @param datasourceCdcProperties
-     * @param details
-     * @param timeZone
-     * @return
-     */
-    public static Map<String, String> listAvailableDatabases(DatasourceCdcProperties datasourceCdcProperties, Map<String, DatasourceRuleProperties> details, String timeZone) {
-        Set<String> allDatabases = DbUtil.listDatabases(datasourceCdcProperties.getSource(), timeZone);
-        Map<String, String> dbRelations = new HashMap<>();
-        for (String name : allDatabases) {
-            for (Map.Entry<String, DatasourceRuleProperties> entry : details.entrySet()) {
-                DatasourceRuleProperties detailProperties = entry.getValue();
-                String dbNameSource = detailProperties.getSharding().getSourceDb();
-                if (StringUtils.isNotBlank(dbNameSource)) {
-                    Pattern pattern = Pattern.compile(dbNameSource);
-                    if (pattern.matcher(name).matches()) {
-                        Preconditions.checkState(!dbRelations.containsKey(name), String.format("database[%s] exists!", name));
-                        dbRelations.put(name, detailProperties.getSharding().getTargetDb());
-                        break;
-                    }
-                }
-
-                if (entry.getKey().equals(name)) {
-                    Preconditions.checkState(!dbRelations.containsKey(name), String.format("database[%s] exists!", name));
-                    dbRelations.put(name, entry.getKey());
-                    break;
-                }
-            }
-        }
-
-        return dbRelations;
     }
 
     private static List<String> listDatabases(DatasourceProperties datasourceProperties, String timeZone) {

@@ -6,7 +6,6 @@ import io.github.collin.cdc.common.util.RedisKeyUtil;
 import io.github.collin.cdc.ods.constants.DbConstants;
 import io.github.collin.cdc.ods.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.ods.dto.TableDTO;
-import io.github.collin.cdc.ods.dto.TableMetaDataDTO;
 import io.github.collin.cdc.ods.enums.SyncType;
 import io.github.collin.cdc.ods.properties.FlinkDatasourceDetailProperties;
 import io.github.collin.cdc.ods.properties.FlinkDatasourceProperties;
@@ -64,40 +63,6 @@ public class DbUtil {
             throw new RuntimeException(e);
         }
         return url;
-    }
-
-    /**
-     * 获取表信息
-     *
-     * @param connnection
-     * @param type
-     * @param tables
-     * @param shardingTables
-     * @return
-     * @throws SQLException
-     */
-    public static Map<String, TableMetaDataDTO> getTablesMetaData(Connection connnection, int type, Set<String> tables, Map<String, String> shardingTables)
-            throws SQLException {
-        Map<String, TableMetaDataDTO> tableMetaDataMap = new HashMap<>(16);
-        try (ResultSet resultSet = connnection.getMetaData().getTables(connnection.getCatalog(), DbConstants.PUBLIC_SCHEMA_PATTERN, null, new String[]{DbConstants.TABLE_TYPE})) {
-            while (resultSet.next()) {
-                String tableName = resultSet.getString(3);
-                // TODO:
-                if (matchSharding(tableName, shardingTables)) {
-                    continue;
-                }
-                if (filterTable(type, tables, tableName)) {
-                    continue;
-                }
-
-                TableMetaDataDTO tableMetaDataDTO = new TableMetaDataDTO();
-                tableMetaDataDTO.setName(tableName);
-                tableMetaDataDTO.setComment(resultSet.getString(5));
-
-                tableMetaDataMap.put(tableMetaDataDTO.getName(), tableMetaDataDTO);
-            }
-        }
-        return tableMetaDataMap;
     }
 
     /**
@@ -202,26 +167,6 @@ public class DbUtil {
         }
 
         return columnMetaDatas;
-    }
-
-    /**
-     * 获取索引字段名（包含主键）
-     *
-     * @param connection
-     * @param database
-     * @param tableName
-     * @return
-     * @throws SQLException
-     */
-    public static Set<String> getIndexColumnNames(Connection connection, String database, String tableName) throws SQLException {
-        Set<String> indexColumnNames = new HashSet<>();
-        try (ResultSet resultSet = connection.getMetaData().getIndexInfo(database, null, tableName, false, false);) {
-            while (resultSet.next()) {
-                indexColumnNames.add(resultSet.getString(9));
-            }
-        }
-
-        return indexColumnNames;
     }
 
     /**
