@@ -8,6 +8,7 @@ import io.github.collin.cdc.common.util.*;
 import io.github.collin.cdc.mysql.cdc.common.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
 import io.github.collin.cdc.mysql.cdc.common.dto.TableDTO;
+import io.github.collin.cdc.mysql.cdc.common.listener.FlinkJobListener;
 import io.github.collin.cdc.mysql.cdc.common.properties.FlinkDatasourceDetailProperties;
 import io.github.collin.cdc.mysql.cdc.common.properties.FlinkDatasourceProperties;
 import io.github.collin.cdc.mysql.cdc.common.properties.FlinkDatasourceShardingProperties;
@@ -18,7 +19,6 @@ import io.github.collin.cdc.mysql.cdc.iceberg.exception.PrimaryKeyStateException
 import io.github.collin.cdc.mysql.cdc.iceberg.function.RowJsonConvertFunction;
 import io.github.collin.cdc.mysql.cdc.iceberg.function.SplitMQProcessFunction;
 import io.github.collin.cdc.mysql.cdc.iceberg.function.SplitTableProcessFunction;
-import io.github.collin.cdc.mysql.cdc.iceberg.listener.FlinkJobListener;
 import io.github.collin.cdc.mysql.cdc.iceberg.properties.OdsProperties;
 import io.github.collin.cdc.mysql.cdc.iceberg.util.CdcUtil;
 import io.github.collin.cdc.mysql.cdc.iceberg.util.HdfsUtil;
@@ -120,7 +120,7 @@ public class Mysql2IcebergOdsHandler {
             proccessInstance(entry.getKey(), env, odsProperties, entry.getValue(), propertiesCacheFileName, adminClient, topics);
         }
 
-        env.getJobListeners().add(new FlinkJobListener(env, odsProperties));
+        env.getJobListeners().add(new FlinkJobListener(env, odsProperties.getApplication(), odsProperties.getRedis()));
 
         // 释放
         if (adminClient != null) {

@@ -64,36 +64,6 @@ public class RobotAdapter implements Serializable {
         }
     }
 
-    /**
-     * ddl同步后企业微信通知
-     *
-     * @param application
-     * @param targetDbName
-     * @param targetTable
-     * @param ddlSql
-     * @param success
-     */
-    public void noticeAfterSynced(String application, String targetDbName, String targetTable, String ddlSql, boolean success) {
-        RobotProperties ddlSync = monitorProperties.getDdlSync();
-        String url = ddlSync.getUrl();
-        try {
-            String showDdlSql = ddlSql.replaceAll("\n", "\\\\n");
-            String result = success ? "<font color=\\\"info\\\">同步成功</font>" : "<font color=\\\"warning\\\">**同步失败**</font>";
-            String msg = String.format(ddlSync.getMessageTemplate(), application, targetDbName, targetTable, showDdlSql, result);
-
-            HttpRequest httpRequest = HttpUtil.createPost(url).body(msg.getBytes(StandardCharsets.UTF_8)).setConnectionTimeout(3000).setReadTimeout(3000);
-
-            if (proxy != null && StringUtils.isNotBlank(proxy.getHost()) && proxy.getPort() != null) {
-                httpRequest.setHttpProxy(proxy.getHost(), proxy.getPort());
-            }
-
-            httpRequest.execute(true);
-        } catch (Exception e) {
-            log.error("ddl sync notice fail|proxy={}, url={}, targetDbName={}, targetTable={}, ddlSql={}", JacksonUtil.toJson(proxy), url,
-                    targetDbName, targetTable, ddlSql, e);
-        }
-    }
-
     public void noticeAfterReceiveDelete(String application, String targetDbName, String targetTable, String json) {
         RobotProperties deleteProperties = monitorProperties.getDelete();
         try {

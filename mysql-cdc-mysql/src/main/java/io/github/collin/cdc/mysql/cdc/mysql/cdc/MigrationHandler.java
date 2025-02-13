@@ -14,7 +14,7 @@ import io.github.collin.cdc.mysql.cdc.mysql.dto.TableDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.cache.ConfigCacheDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.enums.TableShardingType;
 import io.github.collin.cdc.mysql.cdc.mysql.function.GenericJdbcSinkAdapterFunction;
-import io.github.collin.cdc.mysql.cdc.mysql.listener.FlinkJobListener;
+import io.github.collin.cdc.mysql.cdc.common.listener.FlinkJobListener;
 import io.github.collin.cdc.mysql.cdc.mysql.util.CdcUtil;
 import io.github.collin.cdc.mysql.cdc.mysql.util.DbUtil;
 import io.github.collin.cdc.mysql.cdc.mysql.util.MigrationRedisKeyUtil;
@@ -115,7 +115,7 @@ public class MigrationHandler {
             return;
         }
 
-        env.getJobListeners().add(new FlinkJobListener(env, appProperties));
+        env.getJobListeners().add(new FlinkJobListener(env, appProperties.getApplication(), appProperties.getRedis()));
 
         env.execute("migration mysql");
     }
