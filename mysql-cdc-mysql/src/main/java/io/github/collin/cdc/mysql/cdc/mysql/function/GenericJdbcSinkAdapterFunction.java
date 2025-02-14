@@ -5,15 +5,17 @@ import com.ververica.cdc.connectors.shaded.com.google.common.collect.HashBasedTa
 import io.github.collin.cdc.common.common.adapter.RedisAdapter;
 import io.github.collin.cdc.common.constants.CdcConstants;
 import io.github.collin.cdc.common.constants.SqlConstants;
+import io.github.collin.cdc.common.dto.cache.ApplicationDTO;
 import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.properties.ProxyProperties;
 import io.github.collin.cdc.common.properties.RedisProperties;
 import io.github.collin.cdc.common.properties.RobotProperties;
 import io.github.collin.cdc.common.util.JacksonUtil;
+import io.github.collin.cdc.common.util.RedisKeyUtil;
+import io.github.collin.cdc.mysql.cdc.common.adapter.RobotAdapter;
 import io.github.collin.cdc.mysql.cdc.common.constants.DbConstants;
 import io.github.collin.cdc.mysql.cdc.common.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
-import io.github.collin.cdc.mysql.cdc.mysql.adapter.RobotAdapter;
 import io.github.collin.cdc.mysql.cdc.mysql.constants.FieldConstants;
 import io.github.collin.cdc.mysql.cdc.mysql.constants.JdbcConstants;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.JdbcOutputFormatDTO;
@@ -53,6 +55,10 @@ import java.util.*;
 public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
 
     /**
+     * 自定义任务名
+     */
+    private final String application;
+    /**
      * 实例名
      */
     private final String instanceName;
@@ -79,8 +85,10 @@ public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
      * 执行sql<源库名，源表名，JdbcOutputFormatDTO>
      */
     private transient HashBasedTable<String, String, JdbcOutputFormatDTO> sourceOutputFormats = null;
+    private transient ApplicationDTO applicationDTO = null;
 
-    public GenericJdbcSinkAdapterFunction(@Nonnull String instanceName, RedisProperties redisProperties, ProxyProperties proxyProperties, RobotProperties robotProperties) {
+    public GenericJdbcSinkAdapterFunction(String application, @Nonnull String instanceName, RedisProperties redisProperties, ProxyProperties proxyProperties, RobotProperties robotProperties) {
+        this.application = application;
         this.instanceName = Preconditions.checkNotNull(instanceName);
         this.redisProperties = redisProperties;
         this.proxyProperties = proxyProperties;
@@ -90,9 +98,26 @@ public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
-        this.robotAdapter = new RobotAdapter(proxyProperties, robotProperties);
+        this.robotAdapter = new RobotAdapter(proxyProperties, robotProperties, null);
 
-        ConfigCacheDTO configCacheDTO = getConfigCacheDTO();
+        // 从redis中获取配置
+        ConfigCacheDTO configCacheDTO = null;
+        RedissonClient redissonClient = null;
+        try {
+            redissonClient = new RedisAdapter(redisProperties).getRedissonClient();
+            RMap<String, String> applicationCache = redissonClient.getMap(RedisKeyUtil.buildApplicationKey());
+            String applicationJson = applicationCache.get(application);
+            this.applicationDTO = JacksonUtil.parseObject(applicationJson, ApplicationDTO.class);
+
+            RMap<String, String> configCache = redissonClient.getMap(MigrationRedisKeyUtil.buildConfigKey());
+            String configCacheStr = configCache.get(MigrationRedisKeyUtil.buildConfigHashKey(instanceName));
+            configCacheDTO = JacksonUtil.parseObject(configCacheStr, ConfigCacheDTO.class);
+        } finally {
+            if (redissonClient != null) {
+                redissonClient.shutdown();
+                redissonClient = null;
+            }
+        }
         Map<String, TableDTO> tableRelations = configCacheDTO.getTableRelations();
         DatasourceProperties targetDatasource = configCacheDTO.getTargetDatasource();
 
@@ -110,7 +135,8 @@ public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
     public void invoke(RowJson value, Context context) throws IOException {
         if (value.getOp() == OpType.DDL) {
             // 企业微信通知
-            robotAdapter.noticeAfterReceiveDdl(value.getDb(), value.getTable(), value.getDdl());
+            robotAdapter.noticeAfterReceiveDdl(applicationDTO.getApplicationId(), applicationDTO.getJobId(), value.getDdl(), null,
+                    value.getDb(), value.getTable(), null);
             return;
         }
 
@@ -193,26 +219,6 @@ public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
             }
         } catch (Exception e) {
             log.error("connection close error", e);
-        }
-    }
-
-    /**
-     * 从redis中获取配置
-     *
-     * @return
-     */
-    private ConfigCacheDTO getConfigCacheDTO() {
-        RedissonClient redissonClient = null;
-        try {
-            redissonClient = new RedisAdapter(redisProperties).getRedissonClient();
-            RMap<String, String> configCache = redissonClient.getMap(MigrationRedisKeyUtil.buildConfigKey());
-            String configCacheStr = configCache.get(MigrationRedisKeyUtil.buildConfigHashKey(instanceName));
-            return JacksonUtil.parseObject(configCacheStr, ConfigCacheDTO.class);
-        } finally {
-            if (redissonClient != null) {
-                redissonClient.shutdown();
-                redissonClient = null;
-            }
         }
     }
 

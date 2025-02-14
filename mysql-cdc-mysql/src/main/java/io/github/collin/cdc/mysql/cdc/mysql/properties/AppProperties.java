@@ -1,6 +1,7 @@
 package io.github.collin.cdc.mysql.cdc.mysql.properties;
 
 import io.github.collin.cdc.common.properties.*;
+import io.github.collin.cdc.mysql.cdc.common.properties.MonitorProperties;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -43,9 +44,9 @@ public class AppProperties implements Serializable {
      */
     private ProxyProperties proxy = new ProxyProperties();
     /**
-     * ddl接收监控
+     * 监控配置
      */
-    private RobotProperties robot = new RobotProperties();
+    private MonitorProperties monitor = new MonitorProperties();
 
     /**
      * jvm时区

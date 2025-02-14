@@ -14,9 +14,10 @@ redis:
 proxy:
   host: 192.168.108.23
   port: 3128
-robot:
-  key: 7396d54e-15f3-4c4a-80eb-ae9f68605x1b
-  messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**目标库**：%s\n**目标表**：%s\n**ddl**：%s"}}'
+monitor:
+  ddl:
+    key: 7396d54e-15f3-4c4a-80eb-ae9f68605x1b
+    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**目标库**：%s\n**目标表**：%s\n**ddl**：%s"}}'
 jvmTimeZone: GMT+7
 globalTarget:
   host: 192.168.128.6

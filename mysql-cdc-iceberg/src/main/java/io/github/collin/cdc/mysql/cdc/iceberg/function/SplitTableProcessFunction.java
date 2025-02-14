@@ -1,8 +1,6 @@
 package io.github.collin.cdc.mysql.cdc.iceberg.function;
 
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.util.RandomUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.ververica.cdc.connectors.mysql.source.offset.BinlogOffset;
 import io.github.collin.cdc.common.common.adapter.RedisAdapter;
@@ -11,10 +9,11 @@ import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.common.util.RedisKeyUtil;
 import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
-import io.github.collin.cdc.mysql.cdc.iceberg.adapter.RobotAdapter;
+import io.github.collin.cdc.mysql.cdc.common.adapter.RobotAdapter;
 import io.github.collin.cdc.mysql.cdc.iceberg.cache.OutputTagCache;
 import io.github.collin.cdc.mysql.cdc.iceberg.dto.cache.DdlDTO;
 import io.github.collin.cdc.mysql.cdc.iceberg.dto.cache.PropertiesCacheDTO;
+import io.github.collin.cdc.mysql.cdc.common.properties.MonitorProperties;
 import io.github.collin.cdc.mysql.cdc.iceberg.util.DdlUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -28,7 +27,6 @@ import org.redisson.api.RSet;
 import org.redisson.api.RedissonClient;
 
 import java.io.File;
-import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -82,7 +80,8 @@ public class SplitTableProcessFunction extends ProcessFunction<RowJson, RowJson>
         File propertiesFile = getRuntimeContext().getDistributedCache().getFile(propertiesCacheFileName);
         String propertiesJson = FileUtil.readUtf8String(propertiesFile);
         PropertiesCacheDTO propertiesCache = JacksonUtil.parseObject(propertiesJson, PropertiesCacheDTO.class);
-        this.robotAdapter = new RobotAdapter(propertiesCache.getProxy(), propertiesCache.getMonitor());
+        MonitorProperties monitorProperties = propertiesCache.getMonitor();
+        this.robotAdapter = new RobotAdapter(propertiesCache.getProxy(), monitorProperties.getDdl(), monitorProperties.getDelete());
         this.redisAdapter = new RedisAdapter(propertiesCache.getRedis());
     }
 
@@ -190,9 +189,10 @@ public class SplitTableProcessFunction extends ProcessFunction<RowJson, RowJson>
         String applicationJson = applicationCache.get(application);
         ApplicationDTO applicationDTO = JacksonUtil.parseObject(applicationJson, ApplicationDTO.class);
 
-        String orderNo = DateUtil.format(new Date(), "yyyyMMdd_HHmmss_SSS") + "_" + RandomUtil.randomString(8);
         // 企业微信通知
-        robotAdapter.noticeAfterReceiveDdl(orderNo, applicationDTO.getApplicationId(), applicationDTO.getJobId(), targetDbName, targetTable, value.getDdl(), sourceOffset);
+        String targetDdl = DdlUtil.convertArcticSql(value.getDdl(), targetDbName, targetTable);
+        robotAdapter.noticeAfterReceiveDdl(applicationDTO.getApplicationId(), applicationDTO.getJobId(),
+                value.getDdl(), sourceOffset, targetDbName, targetTable, targetDdl);
     }
 
 }

@@ -1,12 +1,10 @@
-package io.github.collin.cdc.mysql.cdc.iceberg.adapter;
+package io.github.collin.cdc.mysql.cdc.common.adapter;
 
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpUtil;
 import io.github.collin.cdc.common.properties.ProxyProperties;
 import io.github.collin.cdc.common.properties.RobotProperties;
 import io.github.collin.cdc.common.util.JacksonUtil;
-import io.github.collin.cdc.mysql.cdc.iceberg.properties.MonitorProperties;
-import io.github.collin.cdc.mysql.cdc.iceberg.util.DdlUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -27,31 +25,38 @@ public class RobotAdapter implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private final ProxyProperties proxy;
-    private final MonitorProperties monitorProperties;
+    private final RobotProperties ddlProperties;
+    private final RobotProperties deleteProperties;
 
     /**
      * 接收到ddl后企业微信通知
      *
      * @param applicationId
-     * @param orderNo
      * @param jobId
+     * @param sourceDdlSql
+     * @param sourceOffset
      * @param targetDbName
      * @param targetTable
-     * @param ddlSql
-     * @param sourceOffset
+     * @param targetDdl
      */
-    public void noticeAfterReceiveDdl(String orderNo, String applicationId, String jobId, String targetDbName, String targetTable, String ddlSql, String sourceOffset) {
-        RobotProperties ddlMonitor = monitorProperties.getDdl();
-        String url = ddlMonitor.getUrl();
+    public void noticeAfterReceiveDdl(String applicationId, String jobId, String sourceDdlSql, String sourceOffset,
+                                      String targetDbName, String targetTable, String targetDdl) {
+        String url = ddlProperties.getUrl();
         try {
-            String arcticDdl = DdlUtil.convertArcticSql(ddlSql, targetDbName, targetTable);
-            String sourceOffsetStr = JacksonUtil.toJson(sourceOffset);
-            sourceOffsetStr = sourceOffsetStr.substring(1, sourceOffsetStr.length() - 1);
-            String showDdlSql = ddlSql.replaceAll("\n", "\\\\n");
-            // （参数：订单号、应用id、任务id、目标库名、目标表名、sourceOffset、ddl语句、arctic ddl）
-            String msg = String.format(ddlMonitor.getMessageTemplate(), orderNo, applicationId, jobId, targetDbName, targetTable, sourceOffsetStr, showDdlSql, arcticDdl);
+            String sourceOffsetStr = null;
+            if (sourceOffset != null) {
+                sourceOffsetStr = JacksonUtil.toJson(sourceOffset);
+                sourceOffsetStr = sourceOffsetStr.substring(1, sourceOffsetStr.length() - 1);
+            }
 
-            HttpRequest httpRequest = HttpUtil.createPost(url).body(msg.getBytes(StandardCharsets.UTF_8)).setConnectionTimeout(3000).setReadTimeout(3000);
+            String showDdlSql = sourceDdlSql.replaceAll("\n", "\\\\n");
+            // （参数：订单号、应用id、任务id、目标库名、目标表名、sourceOffset、ddl语句、arctic ddl）
+            String msg = String.format(ddlProperties.getMessageTemplate(), applicationId, jobId, targetDbName, targetTable, sourceOffsetStr, showDdlSql, targetDdl);
+
+            HttpRequest httpRequest = HttpUtil.createPost(url)
+                    .body(msg.getBytes(StandardCharsets.UTF_8))
+                    .setConnectionTimeout(3000)
+                    .setReadTimeout(3000);
 
             if (proxy != null && StringUtils.isNotBlank(proxy.getHost()) && proxy.getPort() != null) {
                 httpRequest.setHttpProxy(proxy.getHost(), proxy.getPort());
@@ -59,18 +64,20 @@ public class RobotAdapter implements Serializable {
 
             httpRequest.execute(true);
         } catch (Exception e) {
-            log.error("ddl sync notice fail|proxy={}, url={}, targetDbName={}, targetTable={}, sourceOffset={}, ddlSql={}", JacksonUtil.toJson(proxy), url,
-                    targetDbName, targetTable, sourceOffset, ddlSql, e);
+            log.error("ddl sync notice fail|proxy={}, url={}, targetDbName={}, targetTable={}, sourceOffset={}, sourceDdlSql={}", JacksonUtil.toJson(proxy), url,
+                    targetDbName, targetTable, sourceOffset, sourceDdlSql, e);
         }
     }
 
     public void noticeAfterReceiveDelete(String application, String targetDbName, String targetTable, String json) {
-        RobotProperties deleteProperties = monitorProperties.getDelete();
         try {
-            json = json.replaceAll("\\\"","\\\\\"");
+            json = json.replaceAll("\\\"", "\\\\\"");
             String msg = String.format(deleteProperties.getMessageTemplate(), application, targetDbName, targetTable, json);
 
-            HttpRequest httpRequest = HttpUtil.createPost(deleteProperties.getUrl()).body(msg.getBytes(StandardCharsets.UTF_8)).setConnectionTimeout(3000).setReadTimeout(3000);
+            HttpRequest httpRequest = HttpUtil.createPost(deleteProperties.getUrl())
+                    .body(msg.getBytes(StandardCharsets.UTF_8))
+                    .setConnectionTimeout(3000)
+                    .setReadTimeout(3000);
 
             if (proxy != null && StringUtils.isNotBlank(proxy.getHost()) && proxy.getPort() != null) {
                 httpRequest.setHttpProxy(proxy.getHost(), proxy.getPort());

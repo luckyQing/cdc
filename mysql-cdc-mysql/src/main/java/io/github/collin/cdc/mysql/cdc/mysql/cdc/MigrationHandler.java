@@ -162,7 +162,7 @@ public class MigrationHandler {
                 .name(instanceName + "Source")
                 .uid(instanceName + "Source")
                 .rebalance()
-                .addSink(new GenericJdbcSinkAdapterFunction(instanceName, appProperties.getRedis(), appProperties.getProxy(), appProperties.getRobot()))
+                .addSink(new GenericJdbcSinkAdapterFunction(appProperties.getApplication(), instanceName, appProperties.getRedis(), appProperties.getProxy(), appProperties.getMonitor().getDdl()))
                 .name(instanceName + " sink")
                 .uid(instanceName + " sink");
 

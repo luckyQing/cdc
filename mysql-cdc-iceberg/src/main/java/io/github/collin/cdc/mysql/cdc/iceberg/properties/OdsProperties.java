@@ -2,6 +2,7 @@ package io.github.collin.cdc.mysql.cdc.iceberg.properties;
 
 import io.github.collin.cdc.common.properties.*;
 import io.github.collin.cdc.mysql.cdc.common.properties.FlinkDatasourceProperties;
+import io.github.collin.cdc.mysql.cdc.common.properties.MonitorProperties;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;

@@ -15,10 +15,7 @@ monitor:
     messageTemplate: '{"msgtype":"markdown","markdown":{"content":"表数据物理删除：\n> application: %s\n> 目标库: %s\n> 目标表: %s\n> 删除数据: %s"}}'
   ddl:
     key: a10b6ece-1a00-4cc0-a07b-418ef3xaebae
-    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**NO.**：%s\n**application id**：%s\n**job id**：%s\n**目标库**：%s\n**目标表**：%s\n**sourceOffset**：%s\n**ddl**：%s\n**arctic ddl**：%s"}}'
-  ddlSync:
-    key: b50b27e0-b4c0-46ab-b93f-042d4622aace
-    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**application**：%s\n**目标库**：%s\n**目标表**：%s\n**ddl**：%s\n**同步结果**：%s"}}'
+    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**application id**：%s\n**job id**：%s\n**目标库**：%s\n**目标表**：%s\n**sourceOffset**：%s\n**源ddl**：%s\n**目标ddl**：%s"}}'
 targetTimeZone: +08:00
 hdfs:
   warehouse: hdfs://192.168.100.142:8020/user/hive/warehouse/

@@ -4,8 +4,9 @@ import cn.hutool.core.io.FileUtil;
 import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
-import io.github.collin.cdc.mysql.cdc.iceberg.adapter.RobotAdapter;
+import io.github.collin.cdc.mysql.cdc.common.adapter.RobotAdapter;
 import io.github.collin.cdc.mysql.cdc.iceberg.dto.cache.PropertiesCacheDTO;
+import io.github.collin.cdc.mysql.cdc.common.properties.MonitorProperties;
 import lombok.RequiredArgsConstructor;
 import org.apache.flink.api.common.functions.RichFilterFunction;
 import org.apache.flink.configuration.Configuration;
@@ -39,7 +40,8 @@ public class DeletedFilterFunction extends RichFilterFunction<RowJson> {
         File propertiesFile = getRuntimeContext().getDistributedCache().getFile(propertiesCacheFileName);
         String propertiesJson = FileUtil.readUtf8String(propertiesFile);
         PropertiesCacheDTO propertiesCache = JacksonUtil.parseObject(propertiesJson, PropertiesCacheDTO.class);
-        this.robotAdapter = new RobotAdapter(propertiesCache.getProxy(), propertiesCache.getMonitor());
+        MonitorProperties monitorProperties = propertiesCache.getMonitor();
+        this.robotAdapter = new RobotAdapter(propertiesCache.getProxy(), monitorProperties.getDdl(), monitorProperties.getDelete());
     }
 
     @Override

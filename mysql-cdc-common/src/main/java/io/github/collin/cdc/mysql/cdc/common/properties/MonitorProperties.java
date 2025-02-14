@@ -1,4 +1,4 @@
-package io.github.collin.cdc.mysql.cdc.iceberg.properties;
+package io.github.collin.cdc.mysql.cdc.common.properties;
 
 import io.github.collin.cdc.common.properties.RobotProperties;
 import lombok.Getter;
@@ -18,10 +18,6 @@ public class MonitorProperties implements Serializable {
      * ddl接收监控
      */
     private RobotProperties ddl = new RobotProperties();
-    /**
-     * ddl同步
-     */
-    private RobotProperties ddlSync = new RobotProperties();
     /**
      * 表数据物理删除接收监控
      */

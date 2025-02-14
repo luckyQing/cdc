@@ -2,7 +2,7 @@ package io.github.collin.cdc.mysql.cdc.iceberg.dto.cache;
 
 import io.github.collin.cdc.common.properties.ProxyProperties;
 import io.github.collin.cdc.common.properties.RedisProperties;
-import io.github.collin.cdc.mysql.cdc.iceberg.properties.MonitorProperties;
+import io.github.collin.cdc.mysql.cdc.common.properties.MonitorProperties;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
