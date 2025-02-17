@@ -1,0 +1,62 @@
+env: PROD
+application: ods_biz
+kafkaBootstrapServers: snn:9092
+parallelism:
+  execution: 1
+  write: 1
+checkpoint:
+  checkpointInterval: 180000
+  minPauseBetweenCheckpoints: 180000
+  checkpointTimeout: 300000
+maintenance:
+  restartUrl: http://nn:30001/job/restart
+redis:
+  host: 10.201.0.6
+  port: 11098
+  password: wZGsC8JaNmAoTeOW
+proxy:
+  host: 192.168.130.24
+  port: 3128
+monitor:
+  delete:
+    key: 07a49203-40ce-41d7-a341-535e72a6f67e
+    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"表数据物理删除：\n> application: %s\n> 目标库: %s\n> 目标表: %s\n> 删除数据: %s\n\n<@Collin>"}}'
+  ddl:
+    key: d17783a8-88df-44b8-a673-ed6ac9891239
+    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**NO.**：%s\n**application id**：%s\n**job id**：%s\n**目标库**：%s\n**目标表**：%s\n**sourceOffset**：%s\n**ddl**：%s\n**arctic ddl**：%s\n<@Collin>"}}'
+targetTimeZone: +07:00
+hdfs:
+  warehouse: hdfs://nameservice1/user/hive/warehouse/
+  uri: thrift://nn:9083,thrift://snn:9083
+  cacheDir: hdfs://nameservice1/data/cache/ods/
+datasources:
+  biz:
+    #rm-d9j55x458ed3qmwem.mysql.ap-southeast-5.rds.aliyuncs.com
+    host: 192.168.125.85
+    port: 3306
+    username: flink_ro
+    password: YKUdjWFzwrWZ3uml
+    timeZone: +07:00
+    startServerId: 6101
+    details:
+      fingerprint_data:
+        # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成
+        type: 2
+        tables:
+          - t_device_log
+          - t_fingermark_log
+          - t_scene_fingermark
+      lepin_account:
+        type: 2
+        sharding:
+          dbNameSource: lepin_account
+          dbNameTarget: lepin_account
+          tables:
+            account_info: account_info_([0-9]|[1-9][0-9]|1[0-9][0-9])
+      lepin_log_ext:
+        type: 2
+        sharding:
+          dbNameSource: lepin_log_ext
+          dbNameTarget: lepin_log_ext
+          tables:
+            t_vendor_rlog_yyyyMM: t_vendor_rlog_20[0-9][0-9][0-1][0-9]

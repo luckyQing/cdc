@@ -1,0 +1,50 @@
+env: TEST
+application: ods_business
+startupMode: INITIAL
+sourceType: FIX_DATA_MYSQL_SOURCE
+fixSql: select * from %s where create_time between '2024-12-18 09:00:00' and '2024-12-18 14:00:00'
+#kafkaBootstrapServers: 192.168.101.100:9092
+parallelism:
+  execution: 1
+  write: 1
+checkpoint:
+  checkpointInterval: 10000
+  minPauseBetweenCheckpoints: 10000
+  checkpointTimeout: 180000
+redis:
+  host: 10.1.156.207
+  port: 6379
+  password: 123456
+sinkType: STARROCKS
+openCleanTable: false
+starRocks:
+  jdbcUrl: jdbc:mysql://192.168.156.207:9030
+  loadUrl: 192.168.207:8030
+  username: root
+  password: 123456
+monitor:
+  delete:
+    key: fce591e9-3deb-45ee-91d7-2a036cde19b4
+    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"表数据物理删除：\n> application: %s\n> 目标库: %s\n> 目标表: %s\n> 删除数据: %s"}}'
+  ddl:
+    key: fce591e9-3deb-45ee-91d7-2a036cde19b4
+    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**application id**：%s\n**job id**：%s\n**目标库**：%s\n**目标表**：%s\n**sourceOffset**：%s\n**source ddl**：%s\n**target ddl**：%s"}}'
+targetTimeZone: +08:00
+datasources:
+  business:
+    host: localhost
+    port: 23306
+    username: flink_cdc
+    password: 123456
+    timeZone: +07:00
+    startServerId: 7001
+    details:
+      cdc_test_db:
+        # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成
+        # 无主键表：covid_test_users、izidata_test_collection、bnc、buyback
+        type: 2
+        excludeDeleteTables:
+          - login_history
+        tables:
+          - user
+          - login_history

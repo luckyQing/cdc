@@ -1,0 +1,60 @@
+env: TEST
+application: ods_biz
+startupMode: INITIAL
+#kafkaBootstrapServers: 192.168.101.100:9092
+parallelism:
+  execution: 4
+  write: 1
+checkpoint:
+  checkpointInterval: 10000
+  minPauseBetweenCheckpoints: 10000
+  checkpointTimeout: 180000
+redis:
+  host: 10.1.156.207
+  port: 6379
+  password: welcome123
+sinkType: STARROCKS
+openCleanTable: false
+starRocks:
+  jdbcUrl: jdbc:mysql://192.168.156.207:9030
+  loadUrl: 192.168.156.207:8030
+  username: root
+  password: 123456
+monitor:
+  delete:
+    key: fce591e9-3deb-45ee-91d7-2a036cde19b4
+    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"表数据物理删除：\n> application: %s\n> 目标库: %s\n> 目标表: %s\n> 删除数据: %s"}}'
+  ddl:
+    key: fce591e9-3deb-45ee-91d7-2a036cde19b4
+    messageTemplate: '{"msgtype":"markdown","markdown":{"content":"**application id**：%s\n**job id**：%s\n**目标库**：%s\n**目标表**：%s\n**sourceOffset**：%s\n**ddl**：%s\n**arctic ddl**：%s"}}'
+targetTimeZone: +08:00
+datasources:
+  biz:
+    host: localhost
+    port: 23306
+    username: flink_cdc
+    password: 123456
+    timeZone: +08:00
+    startServerId: 7000
+    details:
+      fingerprint_data:
+        # 1、数据库整个表全部生成；2、只生成指定的表；3、除了指定的表，全部生成
+        type: 2
+        tables:
+          - t_device_log
+          - t_fingermark_log
+          - t_scene_fingermark
+      lepin_account:
+        type: 2
+        sharding:
+          dbNameSource: lepin_account
+          dbNameTarget: lepin_account
+          tables:
+            account_info: account_info_([0-9]|[1-9][0-9]|1[0-9][0-9])
+      lepin_log_ext:
+        type: 2
+        sharding:
+          dbNameSource: lepin_log_ext
+          dbNameTarget: lepin_log_ext
+          tables:
+            t_vendor_rlog_yyyyMM: t_vendor_rlog_((20[0-9][0-9][0-1][0-9])|([1-9])|(1[0-2]))
