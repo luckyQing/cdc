@@ -15,7 +15,6 @@ import org.apache.flink.streaming.api.environment.ExecutionCheckpointingOptions;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.config.ExecutionConfigOptions;
 import org.apache.flink.table.api.config.TableConfigOptions;
-import org.apache.iceberg.flink.FlinkWriteOptions;
 
 import java.time.Duration;
 import java.time.ZoneId;
@@ -171,7 +170,6 @@ public class FlinkUtil {
         if (executionMode == RuntimeExecutionMode.BATCH) {
             configuration.set(ExecutionConfigOptions.TABLE_EXEC_DISABLED_OPERATORS, "NestedLoopJoin");
             configuration.set(TableConfigOptions.LOCAL_TIME_ZONE, zoneId);
-            configuration.set(FlinkWriteOptions.WRITE_PARALLELISM, 2);
         } else {
             if (configuration.get(PipelineOptions.OBJECT_REUSE) == null) {
                 configuration.set(PipelineOptions.OBJECT_REUSE, false);

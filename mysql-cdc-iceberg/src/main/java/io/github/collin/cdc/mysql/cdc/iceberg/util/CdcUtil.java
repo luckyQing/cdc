@@ -5,7 +5,6 @@ import com.ververica.cdc.connectors.mysql.source.MySqlSourceBuilder;
 import com.ververica.cdc.connectors.mysql.table.StartupMode;
 import com.ververica.cdc.connectors.mysql.table.StartupOptions;
 import io.github.collin.cdc.common.constants.CdcConstants;
-import io.github.collin.cdc.common.util.IcebergUtil;
 import io.github.collin.cdc.common.util.YamlUtil;
 import io.github.collin.cdc.mysql.cdc.common.constants.FieldConstants;
 import io.github.collin.cdc.mysql.cdc.common.dto.ColumnMetaDataDTO;

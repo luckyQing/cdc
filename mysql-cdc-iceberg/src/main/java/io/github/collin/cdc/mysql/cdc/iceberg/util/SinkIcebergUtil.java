@@ -1,6 +1,5 @@
 package io.github.collin.cdc.mysql.cdc.iceberg.util;
 
-import io.github.collin.cdc.common.util.IcebergUtil;
 import io.github.collin.cdc.mysql.cdc.common.constants.FieldConstants;
 import io.github.collin.cdc.mysql.cdc.common.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.mysql.cdc.iceberg.dto.PartitionFieldDTO;

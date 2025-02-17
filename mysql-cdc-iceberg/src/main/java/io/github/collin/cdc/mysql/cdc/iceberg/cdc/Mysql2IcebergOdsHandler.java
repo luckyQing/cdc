@@ -4,7 +4,7 @@ import io.github.collin.cdc.common.constants.CdcConstants;
 import io.github.collin.cdc.common.enums.Env;
 import io.github.collin.cdc.common.enums.Namespaces;
 import io.github.collin.cdc.common.properties.HdfsProperties;
-import io.github.collin.cdc.common.util.IcebergUtil;
+import io.github.collin.cdc.mysql.cdc.iceberg.util.IcebergUtil;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.common.util.MqUtil;
 import io.github.collin.cdc.mysql.cdc.common.dto.ColumnMetaDataDTO;

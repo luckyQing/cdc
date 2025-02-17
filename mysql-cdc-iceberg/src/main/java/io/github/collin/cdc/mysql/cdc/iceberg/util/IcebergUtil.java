@@ -1,4 +1,4 @@
-package io.github.collin.cdc.common.util;
+package io.github.collin.cdc.mysql.cdc.iceberg.util;
 
 import io.github.collin.cdc.common.constants.SchemaConstants;
 import io.github.collin.cdc.common.properties.HdfsProperties;
