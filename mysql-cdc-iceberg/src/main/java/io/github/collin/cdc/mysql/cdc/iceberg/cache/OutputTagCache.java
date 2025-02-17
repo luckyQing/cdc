@@ -27,19 +27,7 @@ public class OutputTagCache {
      */
     public static OutputTag<RowJson> getOutputTag(String dbName, String table) {
         String outPutTagId = dbName + CdcConstants.DOT + table;
-        OutputTag<RowJson> outputTag = COMMON_OUTPUT_TAG_CACHE.get(outPutTagId);
-        if (outputTag == null) {
-            synchronized (COMMON_OUTPUT_TAG_CACHE) {
-                outputTag = COMMON_OUTPUT_TAG_CACHE.get(outPutTagId);
-                if (outputTag == null) {
-                    outputTag = new OutputTag<RowJson>(outPutTagId) {
-                    };
-                    COMMON_OUTPUT_TAG_CACHE.put(outPutTagId, outputTag);
-                }
-            }
-        }
-
-        return outputTag;
+        return getOutputTag(COMMON_OUTPUT_TAG_CACHE, outPutTagId);
     }
 
     /**
@@ -51,14 +39,26 @@ public class OutputTagCache {
      */
     public static OutputTag<String> getMQOutputTag(String dbName, String table) {
         String outPutTagId = "mq" + CdcConstants.DOT + dbName + CdcConstants.DOT + table;
-        OutputTag<String> outputTag = MQ_OUTPUT_TAG_CACHE.get(outPutTagId);
+        return getOutputTag(MQ_OUTPUT_TAG_CACHE, outPutTagId);
+    }
+
+    /**
+     * 获取旁路输出
+     *
+     * @param outputTagCache
+     * @param outPutTagId
+     * @param <T>
+     * @return
+     */
+    public static <T> OutputTag<T> getOutputTag(ConcurrentMap<String, OutputTag<T>> outputTagCache, String outPutTagId) {
+        OutputTag<T> outputTag = outputTagCache.get(outPutTagId);
         if (outputTag == null) {
-            synchronized (MQ_OUTPUT_TAG_CACHE) {
-                outputTag = MQ_OUTPUT_TAG_CACHE.get(outPutTagId);
+            synchronized (outputTagCache) {
+                outputTag = outputTagCache.get(outPutTagId);
                 if (outputTag == null) {
-                    outputTag = new OutputTag<String>(outPutTagId) {
+                    outputTag = new OutputTag<T>(outPutTagId) {
                     };
-                    MQ_OUTPUT_TAG_CACHE.put(outPutTagId, outputTag);
+                    outputTagCache.put(outPutTagId, outputTag);
                 }
             }
         }
