@@ -40,5 +40,17 @@ public class ColumnMetaDataDTO {
      * 是否为唯一索引
      */
     private boolean uniqueKey;
+    /**
+     * 小数点
+     */
+    private int decimalDigits;
+    /**
+     * 是否可空
+     */
+    private boolean nullable;
+    /**
+     * 默认值
+     */
+    private String defaultValue;
 
 }

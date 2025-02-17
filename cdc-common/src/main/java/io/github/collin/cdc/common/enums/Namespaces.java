@@ -29,6 +29,10 @@ public enum Namespaces {
      */
     private String prod;
 
+
+    public static String getOdsPre(String env) {
+        return getOdsPre(Env.valueOf(env));
+    }
     /**
      * 获取ods namespace前缀
      *
@@ -36,8 +40,8 @@ public enum Namespaces {
      * @return
      * @see Env
      */
-    public static String getOdsPre(String env) {
-        return getValue(Env.valueOf(env), Namespaces.ODS_PRE);
+    public static String getOdsPre(Env env) {
+        return getValue(env, Namespaces.ODS_PRE);
     }
 
     /**

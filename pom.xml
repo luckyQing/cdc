@@ -12,6 +12,7 @@
         <module>mysql-cdc-mysql</module>
         <module>mysql-cdc-iceberg</module>
         <module>mysql-cdc-common</module>
+        <module>mysql-cdc-starrocks</module>
     </modules>
 
     <packaging>pom</packaging>
@@ -33,6 +34,7 @@
         <hadoop>3.3.3</hadoop>
         <hive>3.1.3</hive>
         <iceberg>1.3.0</iceberg>
+        <flink-connector-starrocks>1.2.10_flink-1.17</flink-connector-starrocks>
         <slf4j>2.17.1</slf4j>
         <lombok>1.18.24</lombok>
         <commons-math3>3.5</commons-math3>
@@ -180,6 +182,13 @@
                 <groupId>org.apache.iceberg</groupId>
                 <artifactId>iceberg-flink-runtime-1.17</artifactId>
                 <version>${iceberg}</version>
+                <scope>${scope}</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starrocks</groupId>
+                <artifactId>flink-connector-starrocks</artifactId>
+                <version>${flink-connector-starrocks}</version>
                 <scope>${scope}</scope>
             </dependency>
 

@@ -11,7 +11,7 @@ import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlAlterTableChangeCo
 import com.ververica.cdc.connectors.mysql.source.offset.BinlogOffset;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.mysql.cdc.common.constants.DbConstants;
-import io.github.collin.cdc.mysql.cdc.iceberg.enums.MysqlTypeMapping;
+import io.github.collin.cdc.mysql.cdc.iceberg.enums.MysqlType2IcebergMapping;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.iceberg.Schema;
@@ -57,7 +57,7 @@ public class DdlUtil {
                         String comment = sqlExpr != null ? sqlExpr.getText() : "";
                         String addColumnName = removeMysqlDelimiter(columnName);
 
-                        String ddl = String.format("alter table %s.%s add columns (%s %s comment '%s'", dbName, tableName, addColumnName, MysqlTypeMapping.of(sqlDataType.getName()), comment);
+                        String ddl = String.format("alter table %s.%s add columns (%s %s comment '%s'", dbName, tableName, addColumnName, MysqlType2IcebergMapping.of(sqlDataType.getName()), comment);
                         if (sqlAlterTableAddColumn.isFirst()) {
                             ddl += " first)";
                         } else if (sqlAlterTableAddColumn.getAfterColumn() != null) {
@@ -146,7 +146,7 @@ public class DdlUtil {
                             continue;
                         }
 
-                        updateSchema.addColumn(addColumnName, MysqlTypeMapping.of(sqlDataType.getName()), comment);
+                        updateSchema.addColumn(addColumnName, MysqlType2IcebergMapping.of(sqlDataType.getName()), comment);
                         moveColumn(columnName, sqlAlterTableAddColumn.isFirst(), sqlAlterTableAddColumn.getAfterColumn(), updateSchema, changeColumns);
                         needCommit = true;
                     } else if (sqlAlterTableItem instanceof MySqlAlterTableChangeColumn) {
@@ -160,7 +160,7 @@ public class DdlUtil {
 
                         changeColumns.put(newColumnName, oldColumnName);
 
-                        updateSchema.updateColumn(oldColumnName, MysqlTypeMapping.of(sqlDataType.getName()).asPrimitiveType(), comment);
+                        updateSchema.updateColumn(oldColumnName, MysqlType2IcebergMapping.of(sqlDataType.getName()).asPrimitiveType(), comment);
                         moveColumn(oldColumnName, mySqlAlterTableChangeColumn.isFirst(), mySqlAlterTableChangeColumn.getAfterColumn(), updateSchema, changeColumns);
                         if (!oldColumnName.equals(newColumnName)) {
                             updateSchema.renameColumn(oldColumnName, newColumnName);
@@ -221,7 +221,7 @@ public class DdlUtil {
      * @param columnName
      * @return
      */
-    private static String removeMysqlDelimiter(String columnName) {
+    public static String removeMysqlDelimiter(String columnName) {
         return StringUtils.removeStart(StringUtils.removeEnd(columnName, DbConstants.MYSQL_DELIMITER), DbConstants.MYSQL_DELIMITER);
     }
 

@@ -6,17 +6,78 @@ import com.ververica.cdc.connectors.mysql.table.StartupMode;
 import com.ververica.cdc.connectors.mysql.table.StartupOptions;
 import io.github.collin.cdc.common.constants.CdcConstants;
 import io.github.collin.cdc.common.util.IcebergUtil;
+import io.github.collin.cdc.common.util.YamlUtil;
+import io.github.collin.cdc.mysql.cdc.common.constants.FieldConstants;
 import io.github.collin.cdc.mysql.cdc.common.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
 import io.github.collin.cdc.mysql.cdc.common.properties.FlinkDatasourceProperties;
-import io.github.collin.cdc.mysql.cdc.common.constants.FieldConstants;
-import io.github.collin.cdc.mysql.cdc.iceberg.enums.MysqlTypeMapping;
+import io.github.collin.cdc.mysql.cdc.iceberg.cdc.AbstractMysqlCdcHandler;
+import io.github.collin.cdc.mysql.cdc.iceberg.enums.MysqlType2IcebergMapping;
+import io.github.collin.cdc.mysql.cdc.iceberg.enums.SinkType;
+import io.github.collin.cdc.mysql.cdc.iceberg.properties.AbstractOdsProperties;
+import io.github.collin.cdc.mysql.cdc.iceberg.properties.IcebergOdsProperties;
+import io.github.collin.cdc.mysql.cdc.iceberg.properties.SinkTypeProperties;
+import io.github.collin.cdc.mysql.cdc.iceberg.properties.StarRocksOdsProperties;
 import io.github.collin.cdc.mysql.cdc.iceberg.schema.RowJsonDeserializationSchema;
 import org.apache.iceberg.types.Types;
 
 import java.util.*;
 
 public class CdcUtil {
+    /**
+     * 启动cdc任务
+     * <pre>
+     *     /usr/local/flink-1.17.1/bin/flink run \
+     *     -Djobmanager.memory.process.size=4096m \
+     *     -Djobmanager.memory.jvm-overhead.min=256m \
+     *     -Djobmanager.memory.jvm-overhead.max=256m \
+     *     -Dtaskmanager.memory.process.size=18432m \
+     *     -Dtaskmanager.memory.managed.size=0m \
+     *     -Dtaskmanager.memory.network.min=128m \
+     *     -Dtaskmanager.memory.network.max=128m \
+     *     -Dtaskmanager.memory.jvm-metaspace.size=256m \
+     *     -Dtaskmanager.memory.jvm-overhead.min=256m \
+     *     -Dtaskmanager.memory.jvm-overhead.max=256m \
+     *     -Dyarn.application.name='sync biz mysql to iceberg(ods)' \
+     *     -Dstate.checkpoints.num-retained=3 \
+     *     -t yarn-per-job --detached \
+     *     -c com.lepin.bigdata.ods.App /data/pkg/ods-1.0.0-SNAPSHOT.jar \
+     *     iceberg/prod/application-biz-test-prod.yaml
+     * </pre>
+     *
+     * @param opArgs
+     * @throws Exception
+     */
+    public static void createMySQLSyncDatabase(String[] opArgs) throws Exception {
+        String yamlPath = null;
+        if (opArgs == null || opArgs.length == 0) {
+            throw new IllegalArgumentException("No yaml configuration file path specified!");
+        } else {
+            yamlPath = opArgs[0];
+        }
+        System.out.println("yamlPath=" + yamlPath);
+
+        SinkTypeProperties sinkTypeProperties = YamlUtil.readYaml(yamlPath, SinkTypeProperties.class);
+        String sinkType = sinkTypeProperties.getSinkType();
+
+
+        String className = null;
+        AbstractOdsProperties odsProperties = null;
+        if (SinkType.STARROCKS.toString().equals(sinkType)) {
+            className = "io.github.collin.cdc.mysql.cdc.iceberg.cdc.Mysql2StarRocksOdsHandler";
+            odsProperties = YamlUtil.readYaml(yamlPath, StarRocksOdsProperties.class);
+        } else {
+            className = "io.github.collin.cdc.mysql.cdc.iceberg.cdc.Mysql2IcebergOdsHandler";
+            odsProperties = YamlUtil.readYaml(yamlPath, IcebergOdsProperties.class);
+        }
+
+        AbstractMysqlCdcHandler mysqlCdcHandler = (AbstractMysqlCdcHandler) CdcUtil.class.getClassLoader()
+                .loadClass(className)
+                .getConstructor(odsProperties.getClass())
+                .newInstance(odsProperties);
+
+        mysqlCdcHandler.run();
+    }
 
     /**
      * 获取表字段
@@ -39,9 +100,9 @@ public class CdcUtil {
             ColumnMetaDataDTO columnMetaData = columnMetaDatas.get(i);
             Types.NestedField nestedField = null;
             if (columnMetaData.isPrimaryKey()) {
-                nestedField = Types.NestedField.required((nestedFields.size() + 1), columnMetaData.getName(), MysqlTypeMapping.of(columnMetaData.getMysqlType()), columnMetaData.getComment());
+                nestedField = Types.NestedField.required((nestedFields.size() + 1), columnMetaData.getName(), MysqlType2IcebergMapping.of(columnMetaData.getMysqlType()), columnMetaData.getComment());
             } else {
-                nestedField = Types.NestedField.optional((nestedFields.size() + 1), columnMetaData.getName(), MysqlTypeMapping.of(columnMetaData.getMysqlType()), columnMetaData.getComment());
+                nestedField = Types.NestedField.optional((nestedFields.size() + 1), columnMetaData.getName(), MysqlType2IcebergMapping.of(columnMetaData.getMysqlType()), columnMetaData.getComment());
             }
             nestedFields.add(nestedField);
         }
@@ -133,7 +194,7 @@ public class CdcUtil {
         if (startupMode == StartupMode.LATEST_OFFSET) {
             return StartupOptions.latest();
         }
-        throw new IllegalArgumentException(String.format("startupMode[%s] is not unsupported",startupModeStr));
+        throw new IllegalArgumentException(String.format("startupMode[%s] is not unsupported", startupModeStr));
     }
 
 }

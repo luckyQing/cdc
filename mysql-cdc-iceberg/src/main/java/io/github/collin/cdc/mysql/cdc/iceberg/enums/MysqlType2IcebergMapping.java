@@ -14,7 +14,7 @@ import org.apache.iceberg.types.Types;
  */
 @SuppressWarnings("AlibabaEnumConstantsMustHaveComment")
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public enum MysqlTypeMapping {
+public enum MysqlType2IcebergMapping {
 
     DECIMAL(MysqlType.DECIMAL, Types.DecimalType.of(38, 20)),
     DECIMAL_UNSIGNED(MysqlType.DECIMAL_UNSIGNED, Types.DecimalType.of(38, 20)),
@@ -60,7 +60,7 @@ public enum MysqlTypeMapping {
     private final Type nestedField;
 
     public static Type of(MysqlType mysqlType) {
-        for (MysqlTypeMapping value : MysqlTypeMapping.values()) {
+        for (MysqlType2IcebergMapping value : MysqlType2IcebergMapping.values()) {
             if (value.mysqlType == mysqlType) {
                 return value.nestedField;
             }
@@ -69,7 +69,7 @@ public enum MysqlTypeMapping {
     }
 
     public static Type of(String mysqlDataType) {
-        for (MysqlTypeMapping value : MysqlTypeMapping.values()) {
+        for (MysqlType2IcebergMapping value : MysqlType2IcebergMapping.values()) {
             if (value.mysqlType.getName().equals(mysqlDataType)) {
                 return value.nestedField;
             }

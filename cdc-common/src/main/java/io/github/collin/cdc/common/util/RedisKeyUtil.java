@@ -30,4 +30,16 @@ public class RedisKeyUtil {
         return new StringBuilder(CdcConstants.REDIS_DATA_PREFIX_KEY).append("application").toString();
     }
 
+    public static String buildPropertiesKey(String application) {
+        return "bigdata:data:ods:" + application;
+    }
+
+    public static String buildRelationsKey(String application, String instanceName) {
+        return String.format("bigdata:data:ods:relations:%s:%s", application, instanceName);
+    }
+
+    public static String buildExcludeDeleteTableKey(String application, String instanceName) {
+        return String.format("bigdata:data:ods:exclude_delete_table:%s:%s", application, instanceName);
+    }
+
 }

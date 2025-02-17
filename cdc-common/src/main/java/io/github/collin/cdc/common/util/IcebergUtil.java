@@ -75,6 +75,18 @@ public class IcebergUtil {
      * @param schema
      * @param catalog
      * @param identifier
+     * @return
+     */
+    public static Table createTable(Schema schema, Catalog catalog, TableIdentifier identifier, PartitionSpec partitionSpec) {
+        return createTable(schema, catalog, identifier, null, true, null, partitionSpec);
+    }
+
+    /**
+     * 创建表
+     *
+     * @param schema
+     * @param catalog
+     * @param identifier
      * @param enableUpsert
      * @return
      */
@@ -93,7 +105,7 @@ public class IcebergUtil {
      * @return
      */
     public static Table createTable(Schema schema, Catalog catalog, TableIdentifier identifier, boolean enableUpsert, Long writeTargetFileSizeBytes) {
-        return createTable(schema, catalog, identifier, null, enableUpsert, writeTargetFileSizeBytes);
+        return createTable(schema, catalog, identifier, null, enableUpsert, writeTargetFileSizeBytes, null);
     }
 
     /**
@@ -106,7 +118,9 @@ public class IcebergUtil {
      * @param writeTargetFileSizeBytes
      * @return
      */
-    public static Table createTable(Schema schema, Catalog catalog, TableIdentifier identifier, Set<String> indexColumnNames, boolean enableUpsert, Long writeTargetFileSizeBytes) {
+    public static Table createTable(Schema schema, Catalog catalog, TableIdentifier identifier,
+                                    Set<String> indexColumnNames, boolean enableUpsert, Long writeTargetFileSizeBytes,
+                                    PartitionSpec partitionSpec) {
         if (catalog.tableExists(identifier)) {
             return catalog.loadTable(identifier);
         }
@@ -141,7 +155,8 @@ public class IcebergUtil {
         // 快照保存2小时
         prop.put(TableProperties.MAX_SNAPSHOT_AGE_MS, "7200000");
         Catalog.TableBuilder tableBuilder = catalog.buildTable(identifier, schema)
-                .withPartitionSpec(PartitionSpec.unpartitioned())
+                //.withPartitionSpec(PartitionSpec.unpartitioned())
+                .withPartitionSpec(partitionSpec)
                 .withProperties(prop);
 
         // trino查询时的结果如果有多条，则会随机返回；最好设置排序

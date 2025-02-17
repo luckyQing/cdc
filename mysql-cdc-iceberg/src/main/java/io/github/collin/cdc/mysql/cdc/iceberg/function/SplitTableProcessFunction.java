@@ -1,11 +1,14 @@
 package io.github.collin.cdc.mysql.cdc.iceberg.function;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.RandomUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.ververica.cdc.connectors.mysql.source.offset.BinlogOffset;
 import io.github.collin.cdc.common.common.adapter.RedisAdapter;
 import io.github.collin.cdc.common.dto.cache.ApplicationDTO;
 import io.github.collin.cdc.common.enums.OpType;
+import io.github.collin.cdc.common.properties.RedisProperties;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.common.util.RedisKeyUtil;
 import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
@@ -14,6 +17,7 @@ import io.github.collin.cdc.mysql.cdc.iceberg.cache.OutputTagCache;
 import io.github.collin.cdc.mysql.cdc.iceberg.dto.cache.DdlDTO;
 import io.github.collin.cdc.mysql.cdc.iceberg.dto.cache.PropertiesCacheDTO;
 import io.github.collin.cdc.mysql.cdc.common.properties.MonitorProperties;
+import io.github.collin.cdc.mysql.cdc.iceberg.enums.SinkType;
 import io.github.collin.cdc.mysql.cdc.iceberg.util.DdlUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -27,6 +31,7 @@ import org.redisson.api.RSet;
 import org.redisson.api.RedissonClient;
 
 import java.io.File;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -40,18 +45,16 @@ import java.util.concurrent.ConcurrentMap;
 @Slf4j
 public class SplitTableProcessFunction extends ProcessFunction<RowJson, RowJson> {
 
-    /**
-     * 数据库及表映射关系缓存文件名
-     */
-    private final String relationCacheFileName;
-    /**
-     * properties缓存文件名
-     */
-    private final String propertiesCacheFileName;
+    private final RedisProperties redisProperties;
     /**
      * 自定义任务名
      */
     private final String application;
+    /**
+     * 实例名
+     */
+    private final String instanceName;
+    private final String sinkType;
     /**
      * 映射关系
      * <p>
@@ -63,26 +66,28 @@ public class SplitTableProcessFunction extends ProcessFunction<RowJson, RowJson>
     private transient RobotAdapter robotAdapter;
     private transient RedisAdapter redisAdapter;
 
-    public SplitTableProcessFunction(String application, String relationCacheFileName, String propertiesCacheFileName) {
+    public SplitTableProcessFunction(RedisProperties redisProperties, String application, String instanceName, String sinkType) {
+        this.redisProperties = redisProperties;
         this.application = application;
-        this.relationCacheFileName = relationCacheFileName;
-        this.propertiesCacheFileName = propertiesCacheFileName;
+        this.instanceName = instanceName;
+        this.sinkType = sinkType;
     }
 
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
 
+        this.redisAdapter = new RedisAdapter(redisProperties);
+        RedissonClient redissonClient = redisAdapter.getRedissonClient();
+        // 读取properties
+        String propertiesJson = (String) redissonClient.getBucket(RedisKeyUtil.buildPropertiesKey(application))
+                .get();
+        PropertiesCacheDTO propertiesCache = JacksonUtil.parseObject(propertiesJson, PropertiesCacheDTO.class);
+        MonitorProperties monitor = new MonitorProperties();
+        this.robotAdapter = new RobotAdapter(propertiesCache.getProxy(), monitor.getDdl(), monitor.getDelete());
+
         // 本地缓存映射关系
         initRelations();
-
-        // 读取properties
-        File propertiesFile = getRuntimeContext().getDistributedCache().getFile(propertiesCacheFileName);
-        String propertiesJson = FileUtil.readUtf8String(propertiesFile);
-        PropertiesCacheDTO propertiesCache = JacksonUtil.parseObject(propertiesJson, PropertiesCacheDTO.class);
-        MonitorProperties monitorProperties = propertiesCache.getMonitor();
-        this.robotAdapter = new RobotAdapter(propertiesCache.getProxy(), monitorProperties.getDdl(), monitorProperties.getDelete());
-        this.redisAdapter = new RedisAdapter(propertiesCache.getRedis());
     }
 
     @Override
@@ -98,8 +103,9 @@ public class SplitTableProcessFunction extends ProcessFunction<RowJson, RowJson>
      * 本地缓存映射关系
      */
     private void initRelations() {
-        File relationFile = getRuntimeContext().getDistributedCache().getFile(relationCacheFileName);
-        String relationJson = FileUtil.readUtf8String(relationFile);
+        String relationJson = (String) redisAdapter.getRedissonClient().getBucket(RedisKeyUtil.buildRelationsKey(application, instanceName))
+                .get();
+
         Map<String, String> relationHdfsCache = JacksonUtil.parseObject(relationJson, new TypeReference<Map<String, String>>() {
         });
         relationLocalCache = new ConcurrentHashMap<>(relationHdfsCache.size());
@@ -132,7 +138,9 @@ public class SplitTableProcessFunction extends ProcessFunction<RowJson, RowJson>
         // 监听ddl
         if (value.getOp() == OpType.DDL) {
             monitorDdl(value, targetDbName, targetTable);
-            return;
+            if (SinkType.ICEBERGE.toString().equals(sinkType)) {
+                return;
+            }
         }
 
         // 分流
@@ -190,9 +198,13 @@ public class SplitTableProcessFunction extends ProcessFunction<RowJson, RowJson>
         ApplicationDTO applicationDTO = JacksonUtil.parseObject(applicationJson, ApplicationDTO.class);
 
         // 企业微信通知
-        String targetDdl = DdlUtil.convertArcticSql(value.getDdl(), targetDbName, targetTable);
-        robotAdapter.noticeAfterReceiveDdl(applicationDTO.getApplicationId(), applicationDTO.getJobId(),
-                value.getDdl(), sourceOffset, targetDbName, targetTable, targetDdl);
+        String targetDdl = null;
+        if (SinkType.ICEBERGE.toString().equals(sinkType)) {
+            targetDdl = DdlUtil.convertArcticSql(value.getDdl(), targetDbName, targetTable);
+        } else if (SinkType.STARROCKS.toString().equals(sinkType)){
+            targetDdl = value.getDdl();
+        }
+        robotAdapter.noticeAfterReceiveDdl(applicationDTO.getApplicationId(), applicationDTO.getJobId(), value.getDdl(), sourceOffset, targetDbName, targetTable, targetDdl);
     }
 
 }

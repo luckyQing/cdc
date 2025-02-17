@@ -80,6 +80,25 @@ public class DbCommonUtil {
     }
 
     /**
+     * 获取表备注
+     *
+     * @param connnection
+     * @param database
+     * @param tableName
+     * @return
+     * @throws SQLException
+     */
+    public static String getTablesComment(Connection connnection, String database, String tableName)
+            throws SQLException {
+        try (ResultSet resultSet = connnection.getMetaData().getTables(database, DbConstants.PUBLIC_SCHEMA_PATTERN, tableName, new String[]{DbConstants.TABLE_TYPE})) {
+            while (resultSet.next()) {
+                return resultSet.getString(5);
+            }
+        }
+        return null;
+    }
+
+    /**
      * 获取表信息
      *
      * @param connection
@@ -167,6 +186,9 @@ public class DbCommonUtil {
                 columnMetaData.setComment(columnsResultSet.getString(12));
                 columnMetaData.setMysqlType(MysqlType.getByName(columnsResultSet.getString(6)));
                 columnMetaData.setLength(columnsResultSet.getInt(7));
+                columnMetaData.setDecimalDigits(columnsResultSet.getInt(9));
+                columnMetaData.setNullable(columnsResultSet.getInt(11) > 0);
+                columnMetaData.setDefaultValue(columnsResultSet.getString(13));
                 columnMetaData.setPrimaryKey(false);
                 columnMetaDatas.add(columnMetaData);
             }

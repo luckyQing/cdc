@@ -23,6 +23,10 @@ public class FlinkDatasourceDetailProperties implements Serializable {
      */
     private Set<String> tables;
     /**
+     * 过滤物理删除的表
+     */
+    private Set<String> excludeDeleteTables;
+    /**
      * 分库分表配置
      */
     private FlinkDatasourceShardingProperties sharding = new FlinkDatasourceShardingProperties();

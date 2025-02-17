@@ -1,6 +1,6 @@
 package io.github.collin.cdc.mysql.cdc.iceberg;
 
-import io.github.collin.cdc.mysql.cdc.iceberg.cdc.Mysql2IcebergOdsHandler;
+import io.github.collin.cdc.mysql.cdc.iceberg.util.CdcUtil;
 
 /**
  * ods 入口类
@@ -27,23 +27,16 @@ public class App {
      *     -Dyarn.application.name='sync biz mysql to iceberg(ods)' \
      *     -Dstate.checkpoints.num-retained=3 \
      *     -t yarn-per-job --detached \
-     *     -c io.github.collin.cdc.mysql.cdc.iceberg.App /data/pkg/mysql-cdc-iceberg-1.0.0-SNAPSHOT.jar \
-     *     application-biz-test-prod.yaml
+     *     -c com.lepin.bigdata.ods.App /data/pkg/ods-1.0.0-SNAPSHOT.jar \
+     *     iceberg/prod/application-biz-test-prod.yaml
      * </pre>
      *
      * @param args
      * @throws Exception
      */
     public static void main(String[] args) throws Exception {
-        String yamlPath = null;
-        if (args == null || args.length == 0) {
-            throw new IllegalArgumentException("No yaml configuration file path specified!");
-        } else {
-            yamlPath = args[0];
-        }
-        System.out.println("yamlPath=" + yamlPath);
-
-        new Mysql2IcebergOdsHandler(yamlPath).run();
+        CdcUtil.createMySQLSyncDatabase(args);
     }
+
 
 }

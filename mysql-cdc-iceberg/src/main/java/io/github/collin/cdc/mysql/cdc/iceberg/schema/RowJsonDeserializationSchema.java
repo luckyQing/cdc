@@ -1,7 +1,6 @@
 package io.github.collin.cdc.mysql.cdc.iceberg.schema;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.collect.Maps;
 import com.ververica.cdc.connectors.mysql.debezium.dispatcher.SignalEventDispatcher;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.data.Schema;
 import com.ververica.cdc.connectors.shaded.org.apache.kafka.connect.data.Struct;
@@ -22,6 +21,7 @@ import org.apache.flink.util.Collector;
 
 import java.time.ZoneId;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
 
@@ -38,7 +38,7 @@ public class RowJsonDeserializationSchema implements DebeziumDeserializationSche
      * 目标库时区
      */
     private String timeZone;
-    private final Map<String, Object> customConverterConfigs = Maps.newHashMap();
+    private final Map<String, Object> customConverterConfigs = new HashMap<>(4);
     private transient TypeInformation<RowJson> producedType = TypeInformation.of(RowJson.class);
 
     public RowJsonDeserializationSchema(String timeZone) {
