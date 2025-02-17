@@ -3,7 +3,7 @@ package io.github.collin.cdc.mysql.cdc.mysql.util;
 import io.github.collin.cdc.common.util.RedisKeyUtil;
 import io.github.collin.cdc.mysql.cdc.common.constants.DbConstants;
 import io.github.collin.cdc.mysql.cdc.common.util.DbCommonUtil;
-import io.github.collin.cdc.mysql.cdc.mysql.constants.JdbcConstants;
+import io.github.collin.cdc.mysql.cdc.mysql.constants.JdbcConfig;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.TableDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.properties.DatasourceCdcProperties;
 import io.github.collin.cdc.mysql.cdc.mysql.properties.DatasourceProperties;
@@ -13,7 +13,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.util.Preconditions;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
@@ -143,7 +142,7 @@ public class DbUtil extends DbCommonUtil {
                         String key = RedisKeyUtil.buildTableRelationKey(name, tableName);
                         Preconditions.checkState(!tableRelations.containsKey(key), String.format("tableRelations[%s] exists!", key));
                         tableRelations.put(key, new TableDTO(targetDbName, tableName, false, null,
-                                null, JdbcConstants.BATCH_SIZE, false));
+                                null, JdbcConfig.BATCH_SIZE, false));
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);

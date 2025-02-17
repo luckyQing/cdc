@@ -9,7 +9,7 @@ import io.github.collin.cdc.common.util.YamlUtil;
 import io.github.collin.cdc.mysql.cdc.common.constants.DbConstants;
 import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
 import io.github.collin.cdc.mysql.cdc.common.listener.FlinkJobListener;
-import io.github.collin.cdc.mysql.cdc.mysql.constants.FieldConstants;
+import io.github.collin.cdc.mysql.cdc.mysql.constants.ShardingFieldConstants;
 import io.github.collin.cdc.common.constants.SqlConstants;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.TableDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.cache.ConfigCacheDTO;
@@ -309,13 +309,13 @@ public class MigrationHandler {
     private static void checkShardingField(TableDTO targetTableDTO, String createTableSql) {
         if (targetTableDTO.isSharding() && targetTableDTO.getShardingType() != TableShardingType.ONE) {
             if (StringUtils.isBlank(targetTableDTO.getShardingFieldName())) {
-                if (!createTableSql.contains(FieldConstants.SHARDING_COLUMN_NAME_UID)) {
+                if (!createTableSql.contains(ShardingFieldConstants.SHARDING_COLUMN_NAME_UID)) {
                     throw new IllegalArgumentException(String.format("table[%s.%s] sharding field name is illegal", targetTableDTO.getDbName(), targetTableDTO.getTableName()));
                 }
             } else {
                 if (!(createTableSql.contains(targetTableDTO.getShardingFieldName())
-                        || !(FieldConstants.SHARDING_COLUMN_NAME_UID.equals(targetTableDTO.getShardingFieldName())
-                        || FieldConstants.SHARDING_COLUMN_NAME_ORDER_ID.equals(targetTableDTO.getShardingFieldName())))) {
+                        || !(ShardingFieldConstants.SHARDING_COLUMN_NAME_UID.equals(targetTableDTO.getShardingFieldName())
+                        || ShardingFieldConstants.SHARDING_COLUMN_NAME_ORDER_ID.equals(targetTableDTO.getShardingFieldName())))) {
                     throw new IllegalArgumentException(String.format("table[%s.%s] sharding field name[%s] is illegal", targetTableDTO.getDbName(), targetTableDTO.getTableName(), targetTableDTO.getShardingFieldName()));
                 }
             }

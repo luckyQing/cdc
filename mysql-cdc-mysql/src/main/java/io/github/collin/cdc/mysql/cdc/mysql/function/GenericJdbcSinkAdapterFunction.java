@@ -16,8 +16,8 @@ import io.github.collin.cdc.mysql.cdc.common.adapter.RobotAdapter;
 import io.github.collin.cdc.mysql.cdc.common.constants.DbConstants;
 import io.github.collin.cdc.mysql.cdc.common.dto.ColumnMetaDataDTO;
 import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
-import io.github.collin.cdc.mysql.cdc.mysql.constants.FieldConstants;
-import io.github.collin.cdc.mysql.cdc.mysql.constants.JdbcConstants;
+import io.github.collin.cdc.mysql.cdc.mysql.constants.ShardingFieldConstants;
+import io.github.collin.cdc.mysql.cdc.mysql.constants.JdbcConfig;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.JdbcOutputFormatDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.TableDTO;
 import io.github.collin.cdc.mysql.cdc.mysql.dto.cache.ConfigCacheDTO;
@@ -157,10 +157,10 @@ public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
         if (shardingType != null && shardingType != TableShardingType.ONE) {
             String shardingFieldName = jdbcOutputFormatDTO.getShardingFieldName();
             Object shardingFieldValue = fieldValueMappings.get(jdbcOutputFormatDTO.getShardingFieldName());
-            if (FieldConstants.SHARDING_COLUMN_NAME_UID.equals(shardingFieldName)) {
+            if (ShardingFieldConstants.SHARDING_COLUMN_NAME_UID.equals(shardingFieldName)) {
                 int uid = (int) shardingFieldValue;
                 tableShardingIndex = uid % shardingType.getTableCount();
-            } else if (FieldConstants.SHARDING_COLUMN_NAME_ORDER_ID.equals(shardingFieldName)) {
+            } else if (ShardingFieldConstants.SHARDING_COLUMN_NAME_ORDER_ID.equals(shardingFieldName)) {
                 String orderId = (String) shardingFieldValue;
                 String uidTailStr = orderId.substring(orderId.length() - 3);
 
@@ -256,8 +256,8 @@ public class GenericJdbcSinkAdapterFunction extends RichSinkFunction<RowJson> {
             JdbcOutputFormatDTO jdbcOutputFormatDTO = targetOutputFormats.get(targetDbName, targetDbTable);
             if (jdbcOutputFormatDTO == null) {
                 JdbcExecutionOptions jdbcExecutionOptions = JdbcExecutionOptions.builder()
-                        .withBatchSize(targetDto.getBatchSize() <= 0 ? JdbcConstants.BATCH_SIZE : targetDto.getBatchSize())
-                        .withBatchIntervalMs(JdbcConstants.BATCH_INTERVAL_MS)
+                        .withBatchSize(targetDto.getBatchSize() <= 0 ? JdbcConfig.BATCH_SIZE : targetDto.getBatchSize())
+                        .withBatchIntervalMs(JdbcConfig.BATCH_INTERVAL_MS)
                         .build();
                 TableShardingType shardingType = targetDto.getShardingType();
                 boolean isMutilTable = shardingType != null && shardingType != TableShardingType.ONE;

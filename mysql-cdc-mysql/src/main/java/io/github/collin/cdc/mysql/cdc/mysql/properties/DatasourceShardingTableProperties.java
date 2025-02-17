@@ -1,7 +1,7 @@
 package io.github.collin.cdc.mysql.cdc.mysql.properties;
 
-import io.github.collin.cdc.mysql.cdc.mysql.constants.FieldConstants;
-import io.github.collin.cdc.mysql.cdc.mysql.constants.JdbcConstants;
+import io.github.collin.cdc.mysql.cdc.mysql.constants.ShardingFieldConstants;
+import io.github.collin.cdc.mysql.cdc.mysql.constants.JdbcConfig;
 import io.github.collin.cdc.mysql.cdc.mysql.enums.TableShardingType;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,11 +27,11 @@ public class DatasourceShardingTableProperties implements Serializable {
     /**
      * 分表字段名
      */
-    private String shardingFieldName = FieldConstants.SHARDING_COLUMN_NAME_UID;
+    private String shardingFieldName = ShardingFieldConstants.SHARDING_COLUMN_NAME_UID;
     /**
      * jdbc批量提交记录大小
      */
-    private int batchSize = JdbcConstants.BATCH_SIZE;
+    private int batchSize = JdbcConfig.BATCH_SIZE;
     /**
      * 是否空表（空表只同步结构，不同步数据）
      */

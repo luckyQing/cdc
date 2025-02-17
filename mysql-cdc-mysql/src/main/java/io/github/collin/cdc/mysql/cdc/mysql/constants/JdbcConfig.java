@@ -1,6 +1,6 @@
 package io.github.collin.cdc.mysql.cdc.mysql.constants;
 
-public interface JdbcConstants {
+public interface JdbcConfig {
 
     /**
      * jdbc批量提交大小

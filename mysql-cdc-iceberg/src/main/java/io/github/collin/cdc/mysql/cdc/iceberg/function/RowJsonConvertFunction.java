@@ -3,7 +3,7 @@ package io.github.collin.cdc.mysql.cdc.iceberg.function;
 import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.util.JacksonUtil;
 import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
-import io.github.collin.cdc.mysql.cdc.iceberg.constants.FieldConstants;
+import io.github.collin.cdc.mysql.cdc.common.constants.FieldConstants;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.formats.common.TimestampFormat;
