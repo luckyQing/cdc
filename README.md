@@ -5,8 +5,10 @@
 # 一、模块介绍
 - cdc-common<br/>
   公共代码封装（常量、工具类等）
-- mysql-cdc-iceberg<br/>
-  通过flink cdc实时同步mysql数据到iceberg，支持多实例整库同步
+- mysql-cdc-common<br/>
+  mysql cdc公共代码封装
+- mysql-cdc-ods<br/>
+  通过flink cdc实时同步mysql数据到ods，sink端支持iceberg、starrocks，支持多实例整库同步
 - mysql-cdc-mysql<br/>
   通过flink cdc实时同步mysql到mysql，源数据库实例共用数据库连接（节约资源）
 # 二、使用的组件
