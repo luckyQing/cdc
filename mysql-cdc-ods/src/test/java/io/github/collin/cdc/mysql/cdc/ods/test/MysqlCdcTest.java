@@ -1,6 +1,5 @@
 package io.github.collin.cdc.mysql.cdc.ods.test;
 
-import io.github.collin.cdc.common.enums.YamlEnv;
 import io.github.collin.cdc.mysql.cdc.ods.util.CdcUtil;
 import org.junit.Ignore;
 import org.junit.Test;

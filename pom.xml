@@ -26,7 +26,7 @@
         <spring>5.3.19</spring>
         <snakeyaml>1.29</snakeyaml>
         <jackson>2.13.2.2</jackson>
-        <flink.connector>2.4.0</flink.connector>
+        <flink-sql-connector-mysql-cdc>2.4.0</flink-sql-connector-mysql-cdc>
         <flink>1.17.1</flink>
         <flink-connector-jdbc>3.1.1-1.17</flink-connector-jdbc>
         <scala.binary>2.12</scala.binary>
@@ -45,7 +45,6 @@
         <reflections>0.10.2</reflections>
         <flink-sql-connector-kafka>3.0.0-1.17</flink-sql-connector-kafka>
         <scope>provided</scope>
-        <flink-connector-starrocks>1.2.10_flink-1.17</flink-connector-starrocks>
     </properties>
 
     <dependencyManagement>
@@ -122,7 +121,7 @@
             <dependency>
                 <groupId>com.ververica</groupId>
                 <artifactId>flink-sql-connector-mysql-cdc</artifactId>
-                <version>${flink.connector}</version>
+                <version>${flink-sql-connector-mysql-cdc}</version>
                 <scope>${scope}</scope>
             </dependency>
 
