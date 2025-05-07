@@ -2,7 +2,7 @@ package io.github.collin.cdc.mysql.cdc.common.listener;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
-import io.github.collin.cdc.common.common.adapter.RedisAdapter;
+import io.github.collin.cdc.common.adapter.RedisAdapter;
 import io.github.collin.cdc.common.dto.cache.ApplicationDTO;
 import io.github.collin.cdc.common.properties.RedisProperties;
 import io.github.collin.cdc.common.util.JacksonUtil;

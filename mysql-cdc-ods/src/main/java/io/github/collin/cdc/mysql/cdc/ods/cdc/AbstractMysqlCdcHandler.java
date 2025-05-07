@@ -1,6 +1,7 @@
 package io.github.collin.cdc.mysql.cdc.ods.cdc;
 
 import com.ververica.cdc.connectors.mysql.source.MySqlSource;
+import io.github.collin.cdc.common.adapter.RedisAdapter;
 import io.github.collin.cdc.common.constants.CdcConstants;
 import io.github.collin.cdc.common.enums.Env;
 import io.github.collin.cdc.common.util.FlinkUtil;
@@ -46,7 +47,6 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-import io.github.collin.cdc.common.common.adapter.RedisAdapter;
 
 @Slf4j
 public abstract class AbstractMysqlCdcHandler<T extends AbstractOdsProperties> {

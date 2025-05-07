@@ -1,6 +1,7 @@
 package io.github.collin.cdc.mysql.cdc.ods.function;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import io.github.collin.cdc.common.adapter.RedisAdapter;
 import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.properties.RedisProperties;
 import io.github.collin.cdc.common.util.JacksonUtil;
@@ -41,7 +42,7 @@ public class DeletedFilterFunction extends RichFilterFunction<RowJson> {
 
         RedissonClient redissonClient = null;
         try {
-            redissonClient = new io.github.collin.cdc.common.common.adapter.RedisAdapter(redisProperties).getRedissonClient();
+            redissonClient = new RedisAdapter(redisProperties).getRedissonClient();
 
             String excludeDeleteTableJson = (String) redissonClient.getBucket(RedisKeyUtil.buildExcludeDeleteTableKey(application, instanceName))
                     .get();

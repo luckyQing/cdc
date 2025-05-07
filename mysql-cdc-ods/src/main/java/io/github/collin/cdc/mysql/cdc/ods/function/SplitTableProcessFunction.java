@@ -2,7 +2,7 @@ package io.github.collin.cdc.mysql.cdc.ods.function;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.ververica.cdc.connectors.mysql.source.offset.BinlogOffset;
-import io.github.collin.cdc.common.common.adapter.RedisAdapter;
+import io.github.collin.cdc.common.adapter.RedisAdapter;
 import io.github.collin.cdc.common.dto.cache.ApplicationDTO;
 import io.github.collin.cdc.common.enums.OpType;
 import io.github.collin.cdc.common.properties.RedisProperties;

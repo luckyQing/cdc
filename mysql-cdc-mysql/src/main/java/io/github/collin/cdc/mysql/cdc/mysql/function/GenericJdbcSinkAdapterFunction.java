@@ -2,7 +2,7 @@ package io.github.collin.cdc.mysql.cdc.mysql.function;
 
 import com.mysql.cj.jdbc.Driver;
 import com.ververica.cdc.connectors.shaded.com.google.common.collect.HashBasedTable;
-import io.github.collin.cdc.common.common.adapter.RedisAdapter;
+import io.github.collin.cdc.common.adapter.RedisAdapter;
 import io.github.collin.cdc.common.constants.CdcConstants;
 import io.github.collin.cdc.common.constants.SqlConstants;
 import io.github.collin.cdc.common.dto.cache.ApplicationDTO;

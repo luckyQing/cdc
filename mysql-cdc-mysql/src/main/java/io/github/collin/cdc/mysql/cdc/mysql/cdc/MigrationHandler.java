@@ -1,7 +1,7 @@
 package io.github.collin.cdc.mysql.cdc.mysql.cdc;
 
 import com.ververica.cdc.connectors.mysql.source.MySqlSource;
-import io.github.collin.cdc.common.common.adapter.RedisAdapter;
+import io.github.collin.cdc.common.adapter.RedisAdapter;
 import io.github.collin.cdc.common.constants.CdcConstants;
 import io.github.collin.cdc.common.util.FlinkUtil;
 import io.github.collin.cdc.common.util.JacksonUtil;

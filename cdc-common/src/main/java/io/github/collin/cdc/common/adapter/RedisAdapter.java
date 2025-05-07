@@ -1,4 +1,4 @@
-package io.github.collin.cdc.common.common.adapter;
+package io.github.collin.cdc.common.adapter;
 
 import io.github.collin.cdc.common.properties.RedisProperties;
 import org.redisson.Redisson;
