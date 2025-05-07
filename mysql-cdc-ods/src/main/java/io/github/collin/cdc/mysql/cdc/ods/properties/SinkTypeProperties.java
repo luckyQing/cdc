@@ -14,7 +14,7 @@ public class SinkTypeProperties implements Serializable {
     /**
      * sink端类型
      *
-     * @see com.lepin.bigdata.ods.enums.SinkType
+     * @see io.github.collin.cdc.mysql.cdc.ods.enums.SinkType
      */
     private String sinkType;
 

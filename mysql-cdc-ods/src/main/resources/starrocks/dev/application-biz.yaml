@@ -1,4 +1,4 @@
-env: TEST
+env: PROD
 application: ods_biz
 startupMode: INITIAL
 #kafkaBootstrapServers: 192.168.101.100:9092
@@ -12,12 +12,12 @@ checkpoint:
 redis:
   host: 10.1.156.207
   port: 6379
-  password: welcome123
+  password: 123456
 sinkType: STARROCKS
 openCleanTable: false
 starRocks:
-  jdbcUrl: jdbc:mysql://192.168.156.207:9030
-  loadUrl: 192.168.156.207:8030
+  jdbcUrl: jdbc:mysql://10.1.156.207:9030
+  loadUrl: 10.1.156.207:8030
   username: root
   password: 123456
 monitor:
@@ -31,8 +31,8 @@ targetTimeZone: +08:00
 datasources:
   biz:
     host: localhost
-    port: 23306
-    username: flink_cdc
+    port: 3306
+    username: root
     password: 123456
     timeZone: +08:00
     startServerId: 7000
