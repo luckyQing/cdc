@@ -2,6 +2,7 @@ package io.github.collin.cdc.mysql.cdc.ods.cache;
 
 import io.github.collin.cdc.common.constants.CdcConstants;
 import io.github.collin.cdc.mysql.cdc.common.dto.RowJson;
+import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.util.OutputTag;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,7 +28,7 @@ public class OutputTagCache {
      */
     public static OutputTag<RowJson> getOutputTag(String dbName, String table) {
         String outPutTagId = dbName + CdcConstants.DOT + table;
-        return getOutputTag(COMMON_OUTPUT_TAG_CACHE, outPutTagId);
+        return getOutputTag(COMMON_OUTPUT_TAG_CACHE, RowJson.class, outPutTagId);
     }
 
     /**
@@ -39,24 +40,25 @@ public class OutputTagCache {
      */
     public static OutputTag<String> getMQOutputTag(String dbName, String table) {
         String outPutTagId = "mq" + CdcConstants.DOT + dbName + CdcConstants.DOT + table;
-        return getOutputTag(MQ_OUTPUT_TAG_CACHE, outPutTagId);
+        return getOutputTag(MQ_OUTPUT_TAG_CACHE, String.class, outPutTagId);
     }
 
     /**
      * 获取旁路输出
      *
      * @param outputTagCache
+     * @param type
      * @param outPutTagId
      * @param <T>
      * @return
      */
-    public static <T> OutputTag<T> getOutputTag(ConcurrentMap<String, OutputTag<T>> outputTagCache, String outPutTagId) {
+    public static <T> OutputTag<T> getOutputTag(ConcurrentMap<String, OutputTag<T>> outputTagCache, Class<T> type, String outPutTagId) {
         OutputTag<T> outputTag = outputTagCache.get(outPutTagId);
         if (outputTag == null) {
             synchronized (outputTagCache) {
                 outputTag = outputTagCache.get(outPutTagId);
                 if (outputTag == null) {
-                    outputTag = new OutputTag<T>(outPutTagId) {
+                    outputTag = new OutputTag(outPutTagId, TypeExtractor.createTypeInfo(type)) {
                     };
                     outputTagCache.put(outPutTagId, outputTag);
                 }
