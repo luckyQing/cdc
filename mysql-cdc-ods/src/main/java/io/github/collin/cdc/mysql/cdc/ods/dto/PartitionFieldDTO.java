@@ -26,9 +26,5 @@ public class PartitionFieldDTO {
      * 分桶数
      */
     private int numBuckets;
-    /**
-     * 按时间分区开始时间
-     */
-    private Date startTableTime;
 
 }

@@ -1,6 +1,5 @@
 package io.github.collin.cdc.mysql.cdc.ods.util;
 
-import cn.hutool.core.date.DateUtil;
 import com.google.common.collect.Lists;
 import io.github.collin.cdc.mysql.cdc.ods.dto.PartitionFieldDTO;
 import io.github.collin.cdc.mysql.cdc.ods.enums.PartitionType;
@@ -28,16 +27,16 @@ public class PartitionUtil {
         String t_anti_fraud_desicion_yyyy_db_t_scene_desicion_mmdd = "rc_indonesia_db.t_anti_fraud_desicion_yyyy_db_t_scene_desicion_mmdd";
         PARTITION_INFOS.put(t_anti_fraud_desicion_yyyy_db_t_scene_desicion_mmdd,
                 Lists.newArrayList(new PartitionFieldDTO().setName("Forder_id").setNumBuckets(10).setPartitionType(PartitionType.HASH),
-                        new PartitionFieldDTO().setName("Fcreate_time").setPartitionType(PartitionType.MONTH).setStartTableTime(DateUtil.parseDateTime("2019-01-01 00:00:00"))));
+                        new PartitionFieldDTO().setName("Fcreate_time").setPartitionType(PartitionType.MONTH)));
 
         String t_strategy_decision_record_xx_db_t_rc_decision_record_y = "rc_indonesia_db.t_strategy_decision_record_xx_db_t_rc_decision_record_y";
         PARTITION_INFOS.put(t_strategy_decision_record_xx_db_t_rc_decision_record_y,
                 Lists.newArrayList(new PartitionFieldDTO().setName("Forder_id").setNumBuckets(10).setPartitionType(PartitionType.HASH),
-                        new PartitionFieldDTO().setName("Fcreate_time").setPartitionType(PartitionType.MONTH).setStartTableTime(DateUtil.parseDateTime("2019-01-01 00:00:00"))));
+                        new PartitionFieldDTO().setName("Fcreate_time").setPartitionType(PartitionType.MONTH)));
 
         String t_vendor_rlog_yyyyMM = "lepin_log_ext.t_vendor_rlog_yyyyMM";
         PARTITION_INFOS.put(t_vendor_rlog_yyyyMM,
-                Lists.newArrayList(new PartitionFieldDTO().setName("create_time").setPartitionType(PartitionType.MONTH).setStartTableTime(DateUtil.parseDateTime("2019-01-01 00:00:00"))));
+                Lists.newArrayList(new PartitionFieldDTO().setName("create_time").setPartitionType(PartitionType.MONTH)));
     }
 
     public static Set<String> getPartitionFieldSet(String targetDbNameAndTableName) {

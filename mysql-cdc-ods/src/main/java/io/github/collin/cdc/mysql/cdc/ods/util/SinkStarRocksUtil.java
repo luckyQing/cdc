@@ -1,9 +1,5 @@
 package io.github.collin.cdc.mysql.cdc.ods.util;
 
-import cn.hutool.core.date.DateField;
-import cn.hutool.core.date.DatePattern;
-import cn.hutool.core.date.DateTime;
-import cn.hutool.core.date.DateUtil;
 import com.alibaba.druid.DbType;
 import com.alibaba.druid.sql.SQLUtils;
 import com.alibaba.druid.sql.ast.SQLDataType;
@@ -207,51 +203,7 @@ public class SinkStarRocksUtil {
         }
 
         // 3.0以上版本才支持表达式分区
-        //String.format("PARTITION BY date_trunc('%s', `%s`)", partitionFieldDto.getPartitionType().getValue(), partitionFieldDto.getName());
-        StringBuilder partitionSql = new StringBuilder(256);
-        partitionSql.append(String.format("PARTITION BY RANGE(%s)", partitionFieldDto.getName()));
-        partitionSql.append("(");
-        partitionSql.append(buildPartitionItemSql(partitionFieldDto.getPartitionType(), partitionFieldDto.getStartTableTime()));
-        partitionSql.append(")");
-        return partitionSql.toString();
-    }
-
-    private static String buildPartitionItemSql(PartitionType partitionType, Date startTableTime) {
-        DateTime startTime = null;
-        DateField dateField = null;
-        String partitionFormat = null;
-        StringBuilder partitionSql = new StringBuilder(256);
-        switch (partitionType) {
-            case YEAR:
-                startTime = DateUtil.beginOfYear(startTableTime);
-                dateField = DateField.YEAR;
-                partitionFormat = DatePattern.NORM_YEAR_PATTERN;
-                break;
-            case MONTH:
-                startTime = DateUtil.beginOfMonth(startTableTime);
-                dateField = DateField.MONTH;
-                partitionFormat = DatePattern.SIMPLE_MONTH_PATTERN;
-                break;
-            case DAY:
-                startTime = DateUtil.beginOfDay(startTableTime);
-                dateField = DateField.DAY_OF_MONTH;
-                partitionFormat = DatePattern.PURE_DATE_PATTERN;
-                break;
-        }
-
-        // 只生成近6年的
-        DateTime endTime = DateUtil.offset(new Date(), DateField.YEAR, 6);
-        while (!startTime.isAfter(endTime)) {
-            startTime = DateUtil.offset(startTime, dateField, 1);
-            partitionSql.append(String.format("PARTITION p%s VALUES [('%s'), ('%s'))", DateUtil.format(startTime, partitionFormat),
-                    DateUtil.format(startTime, DatePattern.NORM_DATETIME_PATTERN),
-                    DateUtil.format(DateUtil.offset(startTime, dateField, 1), DatePattern.NORM_DATETIME_PATTERN)));
-            if (!startTime.isAfter(endTime)) {
-                partitionSql.append(",");
-            }
-        }
-
-        return partitionSql.toString();
+        return String.format("PARTITION BY date_trunc('%s', `%s`)", partitionFieldDto.getPartitionType().getValue(), partitionFieldDto.getName());
     }
 
     public static Integer getNumBuckets(String targetDbNameAndTableName) {
