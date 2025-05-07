@@ -13,3 +13,6 @@ yarn application -list|grep ods
 
 # 查看任务日志
 yarn logs -applicationId application_1729671481632_0682
+
+# 执行测试用例时，本地访问webui界面
+http://localhost:8081
